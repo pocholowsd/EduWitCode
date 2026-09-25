@@ -1,0 +1,13 @@
+diff --git a/node_modules/web-serial-polyfill/dist/serial.js b/node_modules/web-serial-polyfill/dist/serial.js
+index 1741b7d..315e8c5 100644
+--- a/node_modules/web-serial-polyfill/dist/serial.js
++++ b/node_modules/web-serial-polyfill/dist/serial.js
+@@ -115,7 +115,7 @@ class UsbEndpointUnderlyingSource {
+                     controller.error(`USB error: ${result.status}`);
+                     this.onError_();
+                 }
+-                if ((_a = result.data) === null || _a === void 0 ? void 0 : _a.buffer) {
++                if (((_a = result.data) === null || _a === void 0 ? void 0 : _a.buffer) && result.data.byteLength > 0) {
+                     const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+                     controller.enqueue(chunk);
+                 }

@@ -1,0 +1,28 @@
+{
+  "name": "componentes-ems",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Aislamiento de los componentes ea-editor y ea-monitor extraidos de componentes/ea-components, sin alterar su funcionalidad.",
+  "scripts": {
+    "dev": "concurrently -n web,api -c cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "backend\\.venv\\Scripts\\python -m uvicorn app.main:app --port 8000 --reload --reload-dir backend/app --app-dir backend",
+    "build": "vite build",
+    "preview": "vite preview",
+    "postinstall": "patch-package"
+  },
+  "dependencies": {
+    "codemirror": "^5.65.21",
+    "esptool-js": "^0.7.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "web-serial-polyfill": "^1.0.15"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^10.0.5",
+    "patch-package": "^8.0.1",
+    "vite": "^8.2.0"
+  }
+}
