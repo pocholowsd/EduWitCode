@@ -27,6 +27,16 @@ function EditorIcon() {
     );
 }
 
+function SlidersIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+            <circle cx="16" cy="7" r="2" />
+            <circle cx="10" cy="17" r="2" />
+        </svg>
+    );
+}
+
 function CopyIcon() {
     return (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -493,23 +503,29 @@ export default function EaEditor() {
         <div className="ea-toolbar">
             <div className="tb-field">
                 <label htmlFor="boardSelect">Placa:</label>
-                <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
-                    <option value="esp32">ESP32 (MicroPython)</option>
-                    <option value="arduino">Arduino Uno</option>
-                </select>
+                <div className="tb-select-wrap">
+                    <span className="tb-select-icon">
+                        <SlidersIcon />
+                    </span>
+                    <select id="boardSelect" title="Placa" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
+                        <option value="esp32">ESP32 (MicroPython)</option>
+                        <option value="arduino">Arduino Uno</option>
+                    </select>
+                </div>
             </div>
 
             <button
                 id="connectBtn"
                 type="button"
                 onClick={toggleConnection}
+                title={isConnected ? "Desconectar (USB)" : "Conectar (USB)"}
                 className={`tb-btn tb-connect ${isConnected ? 'is-connected' : ''}`}
             >
                 <UsbIcon />
-                <span>{isConnected ? "Desconectar (USB)" : "Conectar (USB)"}</span>
+                <span className="tb-label">{isConnected ? "Desconectar (USB)" : "Conectar (USB)"}</span>
                 <span className="tb-status">
                     <span className="tb-status-dot" />
-                    {isConnected ? "Conectado" : "Desconectado"}
+                    <span className="tb-label">{isConnected ? "Conectado" : "Desconectado"}</span>
                 </span>
             </button>
 
@@ -524,9 +540,9 @@ export default function EaEditor() {
                 <PlayIcon />
             </button>
 
-            <label htmlFor="fileInput" className="tb-btn tb-open">
+            <label htmlFor="fileInput" className="tb-btn tb-open" title="Cargar">
                 <FolderIcon />
-                <span>Cargar</span>
+                <span className="tb-label">Cargar</span>
             </label>
             <input type="file" id="fileInput" accept=".py" style={{ display: 'none' }} onChange={handleFileUpload} />
         </div>

@@ -5,6 +5,8 @@
 .ea-toolbar .tb-field label { font-size: 15px; font-weight: 500; color: #374151; }
 .ea-toolbar .tb-field select { appearance: none; -webkit-appearance: none; min-width: 210px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0 40px 0 16px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; outline: none; height: 44px; }
 .ea-toolbar .tb-field select:focus { border-color: #93c5fd; }
+.ea-toolbar .tb-select-wrap { position: relative; display: flex; }
+.ea-toolbar .tb-select-icon { display: none; }
 
 .ea-toolbar .tb-btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; white-space: nowrap; padding: 0 18px; border-radius: 10px; font-size: 15px; font-weight: 600; line-height: 1.2; user-select: none; }
 .ea-toolbar .tb-btn:active { transform: scale(0.96); }
@@ -27,11 +29,18 @@
 @keyframes tb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 @media (max-width: 640px) {
-    .ea-toolbar { gap: 8px; width: 100%; }
-    .ea-toolbar .tb-field { flex: 1 1 100%; }
-    .ea-toolbar .tb-field select { flex: 1 1 auto; min-width: 0; }
-    .ea-toolbar .tb-btn { flex: 1 1 auto; justify-content: center; padding: 0 12px; font-size: 13px; }
-    .ea-toolbar .tb-play { flex: 0 0 auto; }
+    .ea-toolbar { gap: 6px; flex-wrap: nowrap; }
+    .ea-toolbar .tb-label, .ea-toolbar .tb-field label { display: none; }
+    .ea-toolbar .tb-btn { position: relative; flex: 0 0 auto; justify-content: center; width: 40px; height: 40px; padding: 0; }
+    .ea-toolbar .tb-connect { order: 1; }
+    .ea-toolbar .tb-play { order: 2; flex: 0 0 auto; width: 40px; height: 40px; }
+    .ea-toolbar .tb-open { order: 3; }
+    .ea-toolbar .tb-field { order: 4; flex: 0 0 auto; }
+    .ea-toolbar .tb-connect .tb-status { position: absolute; top: 5px; right: 5px; margin: 0; }
+    .ea-toolbar .tb-connect .tb-status-dot { width: 8px; height: 8px; }
+    .ea-toolbar .tb-select-wrap { width: 40px; height: 40px; }
+    .ea-toolbar .tb-select-icon { display: flex; align-items: center; justify-content: center; position: absolute; inset: 0; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #f9fafb; color: #4b5563; pointer-events: none; box-sizing: border-box; }
+    .ea-toolbar .tb-field select { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; padding: 0; opacity: 0; }
 }
 
 .ea-editor-container { 
@@ -44,12 +53,12 @@
     display: flex;
     flex-direction: column;
 }
-.ea-editor-container .container { display: flex; flex-direction: column; gap: 14px; width: 95%; margin: 0 auto; flex: 1; min-height: 0; }
+.ea-editor-container .container { display: flex; flex-direction: column; gap: 14px; width: 95%; margin: 0 auto; flex: 1; min-height: 0; min-width: 0; }
 .ea-editor-container button, .ea-editor-container .btn-file { border: none; padding: 9px 18px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 13px; line-height: 1.3; color: #fff; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.2); text-align: center; display: inline-block; box-sizing: border-box; vertical-align: middle; }
 .ea-editor-container button:active, .ea-editor-container .btn-file:active { transform: scale(0.96); }
 .ea-editor-container button:disabled { background-color: #555 !important; color: #888 !important; cursor: not-allowed; box-shadow: none; }
 
-.ea-editor-container .ide-container { display: flex; flex-direction: column; flex: 1; min-height: 360px; border: 1px solid #2a2d38; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.18); background-color: #15171e; }
+.ea-editor-container .ide-container { display: flex; flex-direction: column; flex: 1; min-height: 360px; min-width: 0; border: 1px solid #2a2d38; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.18); background-color: #15171e; }
 
 .ea-editor-container .ide-titlebar { position: relative; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px; border-bottom: 1px solid #262833; flex-shrink: 0; }
 .ea-editor-container .ide-dots { display: flex; gap: 8px; }
@@ -84,7 +93,7 @@
 .ea-editor-container .bottom-panel-body.is-hidden { display: none; }
 .ea-editor-container .panel-output-wrap { position: relative; height: 100%; }
 .ea-editor-container .panel-output-wrap.is-hidden { display: none; }
-.ea-editor-container .panel-output { height: 100%; overflow-y: auto; background-color: #1c1e27; border: 1px solid #272a35; border-radius: 6px; color: #dcedc1; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; padding: 8px 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; }
+.ea-editor-container .panel-output { height: 100%; overflow-y: auto; background-color: #1c1e27; border: 1px solid #272a35; border-radius: 6px; color: #dcedc1; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; padding: 8px 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; word-break: break-word; box-sizing: border-box; }
 .ea-editor-container .monitor-output.cmdbar-open { padding-bottom: 64px; }
 .ea-editor-container .panel-output::-webkit-scrollbar { width: 6px; }
 .ea-editor-container .panel-output::-webkit-scrollbar-track { background-color: transparent; }
@@ -117,7 +126,11 @@
     .ea-editor-container .ide-container { min-height: 260px; }
     .ea-editor-container .CodeMirror { font-size: 13px; }
     .ea-editor-container .panel-output { font-size: 13px; }
-    .ea-editor-container .ide-statusbar { padding: 0 12px; }
+    .ea-editor-container .ide-statusbar { padding: 0 12px; height: 46px; font-size: 12px; gap: 8px; }
+    .ea-editor-container .ide-status { gap: 6px; min-width: 0; white-space: nowrap; }
+    .ea-editor-container .ide-baud label { display: none; }
+    .ea-editor-container .ide-titlebar { height: 44px; padding: 0 12px; }
+    .ea-editor-container .container { width: 100%; padding: 0 10px; box-sizing: border-box; gap: 10px; }
     .ea-editor-container .bottom-panel { padding: 2px 6px 6px; }
     .ea-editor-container .monitor-cmdbar { right: 8px; bottom: 8px; left: 8px; }
     .ea-editor-container .monitor-cmdbar-controls { width: 100%; }
