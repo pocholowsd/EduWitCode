@@ -82,13 +82,20 @@ jobs:
             # Esperar a que el healthcheck del contenedor pase
             for i in $(seq 1 30); do
               status=$(docker inspect -f '{{.State.Health.Status}}' eduwit_code_app)
-              if [ "$status" = "healthy" ]; then
-                curl -fsS https://code.eduwitlabs.com.mx/api/health
-                echo "Despliegue OK"
-                exit 0
-              fi
+              [ "$status" = "healthy" ] && break
               sleep 5
             done
-            echo "El contenedor no quedó healthy"
-            docker logs --tail 100 eduwit_code_app
+            if [ "$status" != "healthy" ]; then
+              echo "El contenedor no quedó healthy"
+              docker logs --tail 100 eduwit_code_app
+              exit 1
+            fi
+
+            # Traefik solo enruta contenedores healthy y tarda unos segundos
+            # en registrar la ruta, así que se reintenta antes de fallar
+            for i in $(seq 1 12); do
+              curl -fsS https://code.eduwitlabs.com.mx/api/health && echo && echo "Despliegue OK" && exit 0
+              sleep 5
+            done
+            echo "El sitio público no responde en /api/health"
             exit 1
