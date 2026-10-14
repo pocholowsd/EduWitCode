@@ -1,0 +1,94 @@
+# CI: construye la imagen y prueba los endpoints principales en cada push y PR.
+# CD: si el push es a main y la CI pasa, entra al VPS por SSH, actualiza el
+# código y levanta el contenedor con docker compose (detrás de Traefik).
+#
+# Secrets necesarios (Settings > Secrets and variables > Actions):
+#   VPS_HOST     IP o dominio del VPS
+#   VPS_USER     usuario SSH con permiso para usar docker
+#   VPS_SSH_KEY  llave privada SSH (la pública va en ~/.ssh/authorized_keys del VPS)
+#   VPS_PORT     opcional, puerto SSH (por defecto 22)
+#
+# En el VPS el repo vive en ~/EduWitCode y su remote usa el alias SSH
+# propio del proyecto (github-eduwitcode en ~/.ssh/config, con su deploy key),
+# igual que el resto de proyectos de EduWitLabs.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Construir imagen
+        run: docker build -t componentes-ems:ci .
+
+      - name: Arrancar contenedor
+        run: docker run -d --name app -p 8080:80 componentes-ems:ci
+
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do
+            curl -fs http://127.0.0.1:8080/api/health && break
+            sleep 2
+          done
+          curl -fs http://127.0.0.1:8080/api/health
+          curl -fs -o /dev/null http://127.0.0.1:8080/
+          curl -fs http://127.0.0.1:8080/api/esp32-firmware
+          curl -fs -o /dev/null http://127.0.0.1:8080/api/firmware/ESP32_GENERIC.bin
+          curl -fs -X POST http://127.0.0.1:8080/api/compile \
+            -H 'Content-Type: application/json' \
+            -d '{"code":"void setup(){pinMode(13,OUTPUT);} void loop(){digitalWrite(13,!digitalRead(13));delay(500);}"}' \
+            | grep -q '"hex"'
+
+      - name: Logs del contenedor
+        if: failure()
+        run: docker logs app
+
+  deploy:
+    needs: build-test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Desplegar en el VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 30m
+          script: |
+            set -e
+            cd ~/EduWitCode
+            git fetch --prune origin main
+            git reset --hard origin/main
+            docker compose up -d --build
+            docker image prune -f
+
+            # Esperar a que el healthcheck del contenedor pase
+            for i in $(seq 1 30); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' eduwit_code_app)
+              if [ "$status" = "healthy" ]; then
+                curl -fsS https://code.eduwitlabs.com.mx/api/health
+                echo "Despliegue OK"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "El contenedor no quedó healthy"
+            docker logs --tail 100 eduwit_code_app
+            exit 1
