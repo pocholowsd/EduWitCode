@@ -23,9 +23,9 @@ function AppShell() {
           </div>
           <div>
             <h1 className="app-brand-title">Editor + Monitor Serial</h1>
-            <span className="app-brand-subtitle">Componentes aislados de componentes/ea-components</span>
           </div>
         </div>
+        <div id="app-header-actions" className="app-header-actions" />
       </header>
 
       <main className="app-main">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import CodeMirror from 'codemirror';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/dracula.css';
@@ -26,10 +27,46 @@ function EditorIcon() {
     );
 }
 
-function ClearIcon() {
+function CopyIcon() {
     return (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="6" y="5" width="12" height="16" rx="2" />
+            <path d="M9 5V3.5h6V5" />
+        </svg>
+    );
+}
+
+function CaretIcon({ open }) {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {open ? <path d="M6 9l6 6 6-6" /> : <path d="M9 6l6 6-6 6" />}
+        </svg>
+    );
+}
+
+function UsbIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2v15M12 2l-2.5 3M12 2l2.5 3M12 12l-5-3V7M12 14l5-3V8" />
+            <rect x="15.5" y="6" width="3" height="2.5" rx="0.5" />
+            <circle cx="7" cy="6.5" r="1.2" />
+            <circle cx="12" cy="19.5" r="2.5" />
+        </svg>
+    );
+}
+
+function PlayIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
+        </svg>
+    );
+}
+
+function FolderIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         </svg>
     );
 }
@@ -62,6 +99,12 @@ export default function EaEditor() {
     const [showCmdBar, setShowCmdBar] = useState(false);
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
+    const [panelOpen, setPanelOpen] = useState(true);
+    const [headerSlot, setHeaderSlot] = useState(null);
+
+    useEffect(() => {
+        setHeaderSlot(document.getElementById('app-header-actions'));
+    }, []);
 
     useEffect(() => {
         if (!cmInstanceRef.current && editorTextAreaRef.current) {
@@ -377,6 +420,14 @@ export default function EaEditor() {
         if (consoleRef.current) consoleRef.current.innerHTML = "";
     };
 
+    const copiarCodigo = async () => {
+        try {
+            await navigator.clipboard.writeText(cmInstanceRef.current.getValue());
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const clearDeviceConsole = () => {
         if (deviceConsoleRef.current) deviceConsoleRef.current.innerHTML = "";
     };
@@ -407,102 +458,146 @@ export default function EaEditor() {
         }
     };
 
+    const toolbar = (
+        <div className="ea-toolbar">
+            <div className="tb-field">
+                <label htmlFor="boardSelect">Placa:</label>
+                <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
+                    <option value="esp32">ESP32 (MicroPython)</option>
+                    <option value="arduino">Arduino Uno</option>
+                </select>
+            </div>
+
+            <button
+                id="connectBtn"
+                type="button"
+                onClick={toggleConnection}
+                className={`tb-btn tb-connect ${isConnected ? 'is-connected' : ''}`}
+            >
+                <UsbIcon />
+                <span>{isConnected ? "Desconectar (USB)" : "Conectar (USB)"}</span>
+                <span className="tb-status">
+                    <span className="tb-status-dot" />
+                    {isConnected ? "Conectado" : "Desconectado"}
+                </span>
+            </button>
+
+            <button
+                id="uploadBtn"
+                type="button"
+                className={`tb-play ${isUploading ? 'is-uploading' : ''}`}
+                onClick={handleUpload}
+                disabled={!isConnected || isUploading}
+                title={isUploading ? "Subiendo..." : "Subir"}
+            >
+                <PlayIcon />
+            </button>
+
+            <label htmlFor="fileInput" className="tb-btn tb-open">
+                <FolderIcon />
+                <span>Cargar</span>
+            </label>
+            <input type="file" id="fileInput" accept=".py" style={{ display: 'none' }} onChange={handleFileUpload} />
+        </div>
+    );
+
     return (
         <div className="ea-editor-container">
+            {headerSlot ? createPortal(toolbar, headerSlot) : toolbar}
             <div className="container">
-                <h2 className="main-title">Mini Editor Web</h2>
-                <div className="toolbar">
-                    <button 
-                        id="connectBtn"
-                        onClick={toggleConnection} 
-                        className={isConnected ? "btn-disconnect" : "btn-connect"}
-                    >
-                        {isConnected ? "Desconectar" : "Conectar Placa"}
-                    </button>
-                    <button id="uploadBtn" onClick={handleUpload} disabled={!isConnected || isUploading}>
-                        {isUploading ? "Subiendo..." : "Subir"}
-                    </button>
-                    <button id="clearBtn" onClick={clearConsole}>Limpiar Terminal</button>
-                    <label htmlFor="fileInput" className="btn-file">Cargar</label>
-                    <input type="file" id="fileInput" accept=".py" style={{ display: 'none' }} onChange={handleFileUpload} />
-                    
-                    <div className="baud-container">
-                        <label htmlFor="boardSelect">Placa:</label>
-                        <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
-                            <option value="esp32">ESP32 (MicroPython)</option>
-                            <option value="arduino">Arduino Uno</option>
-                        </select>
+                <div className="ide-container">
+                    <div className="ide-titlebar">
+                        <div className="ide-dots">
+                            <span className="ide-dot ide-dot-red" />
+                            <span className="ide-dot ide-dot-yellow" />
+                            <span className="ide-dot ide-dot-green" />
+                        </div>
+                        <span className="ide-filename">{selectedBoard === 'esp32' ? 'main.py' : 'sketch.ino'}</span>
+                        <div className="ide-titlebar-actions">
+                            <button type="button" className="ide-icon-btn" title="Copiar código" onClick={copiarCodigo}>
+                                <CopyIcon />
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="baud-container">
-                        <label htmlFor="baudRate">Baudios:</label>
-                        <select id="baudRate" value={baudRate} onChange={handleBaudChange}>
-                            <option value="9600">9600</option>
-                            <option value="19200">19200</option>
-                            <option value="38400">38400</option>
-                            <option value="57600">57600</option>
-                            <option value="115200">115200</option>
-                        </select>
-                    </div>
-                </div>
-                <div className="ide-container">
-                    <div className={`editor-pane ${showMonitor ? 'is-hidden' : ''}`}>
+                    <div className="editor-pane">
                         <textarea ref={editorTextAreaRef}></textarea>
                     </div>
 
-                    <div className={`terminal-panel ${showMonitor ? 'is-hidden' : ''}`}>
-                        <div className="terminal-panel-header">
-                            <span className="terminal-panel-title">Terminal</span>
-                            <button type="button" className="btn-icon" title="Abrir Monitor Serial" onClick={() => setShowMonitor(true)}>
-                                <MonitorIcon />
+                    <div className="bottom-panel">
+                        <div className="bottom-panel-header">
+                            <button type="button" className="bottom-panel-toggle" onClick={() => setPanelOpen((v) => !v)}>
+                                <CaretIcon open={panelOpen} />
+                                <span>{showMonitor ? 'Monitor Serial' : 'Terminal'}</span>
                             </button>
-                        </div>
-                        <div ref={consoleRef} id="console">Esperando conexión serial...<br/></div>
-                    </div>
-
-                    <div className={`monitor-panel ${showMonitor ? '' : 'is-hidden'}`}>
-                        <div className="terminal-panel-header">
-                            <span className="terminal-panel-title">Monitor Serial</span>
-                            <div className="terminal-panel-actions">
-                                <button type="button" className="btn-icon" title="Limpiar salida" onClick={clearDeviceConsole}>
-                                    <ClearIcon />
+                            <div className="bottom-panel-actions">
+                                <button type="button" className="panel-chip" title="Limpiar salida" onClick={showMonitor ? clearDeviceConsole : clearConsole}>
+                                    CLR
                                 </button>
-                                <button type="button" className="btn-icon" title="Volver al editor" onClick={() => setShowMonitor(false)}>
-                                    <EditorIcon />
+                                <button type="button" className="panel-chip" title={showMonitor ? 'Ver Terminal' : 'Abrir Monitor Serial'} onClick={() => setShowMonitor((v) => !v)}>
+                                    {showMonitor ? <EditorIcon /> : <MonitorIcon />}
+                                    <span>{showMonitor ? 'Terminal' : 'Monitor serial'}</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div ref={deviceConsoleRef} className={`monitor-output ${showCmdBar ? 'cmdbar-open' : ''}`}>Esperando datos del dispositivo...<br/></div>
+                        <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`}>
+                            <div className={`panel-output-wrap ${showMonitor ? 'is-hidden' : ''}`}>
+                                <div ref={consoleRef} id="console" className="panel-output">Esperando conexión serial...<br/></div>
+                            </div>
 
-                        <div className="monitor-cmdbar">
-                            {showCmdBar && (
-                                <div className="monitor-cmdbar-controls">
-                                    <select value={lineEnding} onChange={(e) => setLineEnding(e.target.value)}>
-                                        <option value="none">Sin ajuste de línea</option>
-                                        <option value="nl">Nueva línea (NL)</option>
-                                        <option value="cr">Retorno de carro (CR)</option>
-                                        <option value="both">Ambos (NL &amp; CR)</option>
-                                    </select>
-                                    <input
-                                        type="text"
-                                        value={cmdInput}
-                                        onChange={(e) => setCmdInput(e.target.value)}
-                                        onKeyDown={handleCmdKeyDown}
-                                        placeholder="Escribe un comando y presiona Enter..."
-                                        disabled={!isConnected}
-                                    />
-                                    <button type="button" onClick={enviarComando} disabled={!isConnected}>Enviar ➔</button>
+                            <div className={`panel-output-wrap ${showMonitor ? '' : 'is-hidden'}`}>
+                                <div ref={deviceConsoleRef} className={`panel-output monitor-output ${showCmdBar ? 'cmdbar-open' : ''}`}>Esperando datos del dispositivo...<br/></div>
+
+                                <div className="monitor-cmdbar">
+                                    {showCmdBar && (
+                                        <div className="monitor-cmdbar-controls">
+                                            <select value={lineEnding} onChange={(e) => setLineEnding(e.target.value)}>
+                                                <option value="none">Sin ajuste de línea</option>
+                                                <option value="nl">Nueva línea (NL)</option>
+                                                <option value="cr">Retorno de carro (CR)</option>
+                                                <option value="both">Ambos (NL &amp; CR)</option>
+                                            </select>
+                                            <input
+                                                type="text"
+                                                value={cmdInput}
+                                                onChange={(e) => setCmdInput(e.target.value)}
+                                                onKeyDown={handleCmdKeyDown}
+                                                placeholder="Escribe un comando y presiona Enter..."
+                                                disabled={!isConnected}
+                                            />
+                                            <button type="button" onClick={enviarComando} disabled={!isConnected}>Enviar ➔</button>
+                                        </div>
+                                    )}
+                                    <button
+                                        type="button"
+                                        className="btn-fab"
+                                        title={showCmdBar ? 'Ocultar comandos' : 'Enviar comando'}
+                                        onClick={() => setShowCmdBar((v) => !v)}
+                                    >
+                                        <ChevronIcon open={showCmdBar} />
+                                    </button>
                                 </div>
-                            )}
-                            <button
-                                type="button"
-                                className="btn-fab"
-                                title={showCmdBar ? 'Ocultar comandos' : 'Enviar comando'}
-                                onClick={() => setShowCmdBar((v) => !v)}
-                            >
-                                <ChevronIcon open={showCmdBar} />
-                            </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="ide-statusbar">
+                        <div className="ide-status">
+                            <span className={`ide-status-dot ${isConnected ? 'is-on' : ''}`} />
+                            <span>{isConnected ? 'Conectado' : 'Desconectado'}</span>
+                            <span className="ide-status-sep" />
+                            <span>baud: {isConnected ? baudRate : '—'}</span>
+                        </div>
+                        <div className="ide-baud">
+                            <label htmlFor="baudRate">Baud Rate:</label>
+                            <select id="baudRate" value={baudRate} onChange={handleBaudChange}>
+                                <option value="9600">9600</option>
+                                <option value="19200">19200</option>
+                                <option value="38400">38400</option>
+                                <option value="57600">57600</option>
+                                <option value="115200">115200</option>
+                            </select>
                         </div>
                     </div>
                 </div>
