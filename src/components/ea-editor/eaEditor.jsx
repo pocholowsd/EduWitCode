@@ -37,6 +37,15 @@ function SlidersIcon() {
     );
 }
 
+function GaugeIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 18a8 8 0 1 1 16 0" />
+            <path d="M12 18l4-5" />
+        </svg>
+    );
+}
+
 function CopyIcon() {
     return (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -206,6 +215,8 @@ export default function EaEditor() {
 
     const readSerialLoop = async () => {
         const decoder = new TextDecoder();
+        let ultimoDato = 0;
+        let terminoEnSalto = true;
         try {
             while (portRef.current && portRef.current.readable && keepReadingRef.current) {
                 readerRef.current = portRef.current.readable.getReader();
@@ -214,8 +225,13 @@ export default function EaEditor() {
                         const { value, done } = await readerRef.current.read();
                         if (done) break;
                         if (value && deviceConsoleRef.current) {
-                            const text = decoder.decode(value);
-                            deviceConsoleRef.current.innerHTML += text.replace(/\r/g, '').replace(/\n/g, '<br>');
+                            const text = decoder.decode(value, { stream: true }).replace(/\r/g, '');
+                            if (!text) continue;
+                            const ahora = Date.now();
+                            const separar = !terminoEnSalto && ultimoDato && ahora - ultimoDato > 150;
+                            ultimoDato = ahora;
+                            terminoEnSalto = text.endsWith('\n');
+                            deviceConsoleRef.current.innerHTML += (separar ? '<br>' : '') + text.replace(/\n/g, '<br>');
                             deviceConsoleRef.current.scrollTop = deviceConsoleRef.current.scrollHeight;
                         }
                     }
@@ -514,6 +530,22 @@ export default function EaEditor() {
                 </div>
             </div>
 
+            <div className="tb-field tb-field-baud">
+                <label htmlFor="baudRate">Baudios:</label>
+                <div className="tb-select-wrap">
+                    <span className="tb-select-icon">
+                        <GaugeIcon />
+                    </span>
+                    <select id="baudRate" title="Baudios" value={baudRate} onChange={handleBaudChange}>
+                        <option value="9600">9600</option>
+                        <option value="19200">19200</option>
+                        <option value="38400">38400</option>
+                        <option value="57600">57600</option>
+                        <option value="115200">115200</option>
+                    </select>
+                </div>
+            </div>
+
             <button
                 id="connectBtn"
                 type="button"
@@ -643,16 +675,6 @@ export default function EaEditor() {
                             <span>{isConnected ? 'Conectado' : 'Desconectado'}</span>
                             <span className="ide-status-sep" />
                             <span>baud: {isConnected ? baudRate : '—'}</span>
-                        </div>
-                        <div className="ide-baud">
-                            <label htmlFor="baudRate">Baud Rate:</label>
-                            <select id="baudRate" value={baudRate} onChange={handleBaudChange}>
-                                <option value="9600">9600</option>
-                                <option value="19200">19200</option>
-                                <option value="38400">38400</option>
-                                <option value="57600">57600</option>
-                                <option value="115200">115200</option>
-                            </select>
                         </div>
                     </div>
                 </div>
