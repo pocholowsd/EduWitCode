@@ -100,6 +100,9 @@ export default function EaEditor() {
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
     const [panelOpen, setPanelOpen] = useState(true);
+    const [panelHeight, setPanelHeight] = useState(170);
+    const ideContainerRef = useRef(null);
+    const dragPanelRef = useRef(null);
     const [headerSlot, setHeaderSlot] = useState(null);
 
     useEffect(() => {
@@ -420,6 +423,34 @@ export default function EaEditor() {
         if (consoleRef.current) consoleRef.current.innerHTML = "";
     };
 
+    const iniciarArrastrePanel = (e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragPanelRef.current = { startY: e.clientY, startHeight: panelOpen ? panelHeight : 0 };
+    };
+
+    const moverArrastrePanel = (e) => {
+        if (!dragPanelRef.current) return;
+        const { startY, startHeight } = dragPanelRef.current;
+        const nuevaAltura = startHeight + (startY - e.clientY);
+        const alturaMaxima = Math.max(80, (ideContainerRef.current?.clientHeight || 0) - 240);
+        if (nuevaAltura < 50) {
+            setPanelOpen(false);
+            return;
+        }
+        setPanelOpen(true);
+        setPanelHeight(Math.min(Math.max(nuevaAltura, 70), alturaMaxima));
+    };
+
+    const terminarArrastrePanel = (e) => {
+        if (!dragPanelRef.current) return;
+        dragPanelRef.current = null;
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+        cmInstanceRef.current?.refresh();
+    };
+
     const copiarCodigo = async () => {
         try {
             await navigator.clipboard.writeText(cmInstanceRef.current.getValue());
@@ -505,7 +536,7 @@ export default function EaEditor() {
         <div className="ea-editor-container">
             {headerSlot ? createPortal(toolbar, headerSlot) : toolbar}
             <div className="container">
-                <div className="ide-container">
+                <div className="ide-container" ref={ideContainerRef}>
                     <div className="ide-titlebar">
                         <div className="ide-dots">
                             <span className="ide-dot ide-dot-red" />
@@ -525,6 +556,14 @@ export default function EaEditor() {
                     </div>
 
                     <div className="bottom-panel">
+                        <div
+                            className="bottom-panel-resizer"
+                            title="Arrastra para ajustar"
+                            onPointerDown={iniciarArrastrePanel}
+                            onPointerMove={moverArrastrePanel}
+                            onPointerUp={terminarArrastrePanel}
+                            onPointerCancel={terminarArrastrePanel}
+                        />
                         <div className="bottom-panel-header">
                             <button type="button" className="bottom-panel-toggle" onClick={() => setPanelOpen((v) => !v)}>
                                 <CaretIcon open={panelOpen} />
@@ -541,7 +580,7 @@ export default function EaEditor() {
                             </div>
                         </div>
 
-                        <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`}>
+                        <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`} style={{ height: panelHeight }}>
                             <div className={`panel-output-wrap ${showMonitor ? 'is-hidden' : ''}`}>
                                 <div ref={consoleRef} id="console" className="panel-output">Esperando conexión serial...<br/></div>
                             </div>

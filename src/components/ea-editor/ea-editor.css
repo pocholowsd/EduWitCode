@@ -68,20 +68,23 @@
 .ea-editor-container .cm-s-dracula .CodeMirror-gutters { border-right: none; }
 .ea-editor-container .cm-s-dracula .CodeMirror-linenumber { color: #4b5060; }
 
-.ea-editor-container .bottom-panel { display: flex; flex-direction: column; border-top: 1px solid #262833; padding: 10px 16px 14px; flex-shrink: 0; text-align: left; }
-.ea-editor-container .bottom-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.ea-editor-container .bottom-panel-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 4px 2px; background-color: transparent; color: #38bdf8; font-size: 15px; font-weight: 700; box-shadow: none; }
+.ea-editor-container .bottom-panel { position: relative; display: flex; flex-direction: column; border-top: 1px solid #262833; padding: 2px 8px 8px; flex-shrink: 0; text-align: left; }
+.ea-editor-container .bottom-panel-resizer { position: absolute; top: -5px; left: 0; right: 0; height: 10px; cursor: row-resize; touch-action: none; z-index: 3; }
+.ea-editor-container .bottom-panel-resizer::after { content: ''; position: absolute; top: 3px; left: 50%; width: 44px; height: 4px; margin-left: -22px; border-radius: 2px; background-color: #3a3e4b; transition: background-color 0.15s ease; }
+.ea-editor-container .bottom-panel-resizer:hover::after, .ea-editor-container .bottom-panel-resizer:active::after { background-color: #38bdf8; }
+.ea-editor-container .bottom-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.ea-editor-container .bottom-panel-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px; background-color: transparent; color: #38bdf8; font-size: 14px; font-weight: 700; box-shadow: none; }
 .ea-editor-container .bottom-panel-toggle svg { color: #8b909c; }
 .ea-editor-container .bottom-panel-toggle:active { transform: none; }
-.ea-editor-container .bottom-panel-actions { display: flex; align-items: center; gap: 8px; }
-.ea-editor-container .panel-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; background-color: #1f222b; border: 1px solid #333744; border-radius: 6px; color: #cbd5e1; font-size: 13px; font-weight: 600; box-shadow: none; }
+.ea-editor-container .bottom-panel-actions { display: flex; align-items: center; gap: 6px; }
+.ea-editor-container .panel-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; background-color: #1f222b; border: 1px solid #333744; border-radius: 6px; color: #cbd5e1; font-size: 12px; font-weight: 600; box-shadow: none; }
 .ea-editor-container .panel-chip:hover { background-color: #282c37; }
 
-.ea-editor-container .bottom-panel-body { margin-top: 10px; }
+.ea-editor-container .bottom-panel-body { margin-top: 4px; }
 .ea-editor-container .bottom-panel-body.is-hidden { display: none; }
-.ea-editor-container .panel-output-wrap { position: relative; }
+.ea-editor-container .panel-output-wrap { position: relative; height: 100%; }
 .ea-editor-container .panel-output-wrap.is-hidden { display: none; }
-.ea-editor-container .panel-output { height: clamp(110px, 22vh, 190px); overflow-y: auto; background-color: #1c1e27; border: 1px solid #272a35; border-radius: 8px; color: #dcedc1; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; padding: 12px 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; }
+.ea-editor-container .panel-output { height: 100%; overflow-y: auto; background-color: #1c1e27; border: 1px solid #272a35; border-radius: 6px; color: #dcedc1; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; padding: 8px 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; }
 .ea-editor-container .monitor-output.cmdbar-open { padding-bottom: 64px; }
 .ea-editor-container .panel-output::-webkit-scrollbar { width: 6px; }
 .ea-editor-container .panel-output::-webkit-scrollbar-track { background-color: transparent; }
@@ -113,9 +116,9 @@
     .ea-editor-container button, .ea-editor-container .btn-file { flex: 1 1 auto; padding: 8px 12px; font-size: 12px; }
     .ea-editor-container .ide-container { min-height: 260px; }
     .ea-editor-container .CodeMirror { font-size: 13px; }
-    .ea-editor-container .panel-output { height: clamp(100px, 20vh, 160px); font-size: 13px; }
+    .ea-editor-container .panel-output { font-size: 13px; }
     .ea-editor-container .ide-statusbar { padding: 0 12px; }
-    .ea-editor-container .bottom-panel { padding: 10px 12px 12px; }
+    .ea-editor-container .bottom-panel { padding: 2px 6px 6px; }
     .ea-editor-container .monitor-cmdbar { right: 8px; bottom: 8px; left: 8px; }
     .ea-editor-container .monitor-cmdbar-controls { width: 100%; }
     .ea-editor-container .monitor-cmdbar-controls input { flex: 1 1 100%; }
