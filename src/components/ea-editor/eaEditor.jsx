@@ -91,11 +91,15 @@ function ChevronIcon({ open }) {
     );
 }
 
+const MONITOR_MAX_CHARS = 40000;
+
 export default function EaEditor() {
     const editorTextAreaRef = useRef(null);
     const cmInstanceRef = useRef(null);
     const consoleRef = useRef(null);
     const deviceConsoleRef = useRef(null);
+    const monitorBufferRef = useRef('');
+    const monitorFrameRef = useRef(null);
 
     const portRef = useRef(null);
     const readerRef = useRef(null);
@@ -210,6 +214,28 @@ export default function EaEditor() {
         }
     };
 
+    const vaciarBufferMonitor = () => {
+        monitorFrameRef.current = null;
+        const el = deviceConsoleRef.current;
+        const pendiente = monitorBufferRef.current;
+        monitorBufferRef.current = '';
+        if (!el || !pendiente) return;
+        const estabaAbajo = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        el.appendChild(document.createTextNode(pendiente));
+        if (el.childNodes.length > 200 || el.textContent.length > MONITOR_MAX_CHARS) {
+            el.textContent = el.textContent.slice(-MONITOR_MAX_CHARS);
+        }
+        if (estabaAbajo) el.scrollTop = el.scrollHeight;
+    };
+
+    const escribirEnMonitor = (texto) => {
+        monitorBufferRef.current = (monitorBufferRef.current + texto).slice(-MONITOR_MAX_CHARS);
+        if (monitorFrameRef.current) return;
+        monitorFrameRef.current = document.hidden
+            ? setTimeout(vaciarBufferMonitor, 250)
+            : requestAnimationFrame(vaciarBufferMonitor);
+    };
+
     const readSerialLoop = async () => {
         const decoder = new TextDecoder();
         let ultimoDato = 0;
@@ -221,25 +247,30 @@ export default function EaEditor() {
                     while (keepReadingRef.current) {
                         const { value, done } = await readerRef.current.read();
                         if (done) break;
-                        if (value && deviceConsoleRef.current) {
+                        if (value) {
                             const text = decoder.decode(value, { stream: true }).replace(/\r/g, '');
                             if (!text) continue;
                             const ahora = Date.now();
                             const separar = !terminoEnSalto && ultimoDato && ahora - ultimoDato > 150;
                             ultimoDato = ahora;
                             terminoEnSalto = text.endsWith('\n');
-                            deviceConsoleRef.current.innerHTML += (separar ? '<br>' : '') + text.replace(/\n/g, '<br>');
-                            deviceConsoleRef.current.scrollTop = deviceConsoleRef.current.scrollHeight;
+                            escribirEnMonitor((separar ? '\n' : '') + text);
                         }
                     }
                 } catch (error) {
                     console.error(error);
+                    if (keepReadingRef.current) {
+                        logConsole(`Lectura del puerto interrumpida: ${errorMessage(error)}`, 'error');
+                    }
                 } finally {
                     if (readerRef.current) {
                         readerRef.current.releaseLock();
                         readerRef.current = null;
                     }
                 }
+            }
+            if (keepReadingRef.current && portRef.current && !portRef.current.readable) {
+                logConsole('Se perdió la lectura del puerto. Desconecta y vuelve a conectar la placa.', 'error');
             }
         } catch (err) {
             console.error(err);
@@ -252,7 +283,7 @@ export default function EaEditor() {
             const selectedBaudRate = parseInt(baudRate, 10);
 
             if (!portRef.current.readable) {
-                await portRef.current.open({ baudRate: selectedBaudRate });
+                await portRef.current.open({ baudRate: selectedBaudRate, bufferSize: 8192 });
             }
             if (!silent) {
                 logConsole(`Escuchando puerto serie (${selectedBaudRate} baudios)...`);
@@ -481,7 +512,8 @@ export default function EaEditor() {
     };
 
     const clearDeviceConsole = () => {
-        if (deviceConsoleRef.current) deviceConsoleRef.current.innerHTML = "";
+        monitorBufferRef.current = '';
+        if (deviceConsoleRef.current) deviceConsoleRef.current.textContent = "";
     };
 
     const enviarComando = async () => {
@@ -645,7 +677,7 @@ export default function EaEditor() {
                             </div>
 
                             <div className={`panel-output-wrap ${showMonitor ? '' : 'is-hidden'}`}>
-                                <div ref={deviceConsoleRef} className={`panel-output monitor-output ${showCmdBar ? 'cmdbar-open' : ''}`}>Esperando datos del dispositivo...<br/></div>
+                                <div ref={deviceConsoleRef} className={`panel-output monitor-output ${showCmdBar ? 'cmdbar-open' : ''}`}>{'Esperando datos del dispositivo...\n'}</div>
 
                                 <div className="monitor-cmdbar">
                                     {showCmdBar && (
