@@ -37,15 +37,6 @@ function SlidersIcon() {
     );
 }
 
-function GaugeIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 18a8 8 0 1 1 16 0" />
-            <path d="M12 18l4-5" />
-        </svg>
-    );
-}
-
 function CopyIcon() {
     return (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -119,10 +110,29 @@ export default function EaEditor() {
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
     const [panelOpen, setPanelOpen] = useState(true);
+    const [terminal, setTerminal] = useState([]);
+    const logSeqRef = useRef(0);
+
+    useEffect(() => {
+        if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+    }, [terminal]);
     const [panelHeight, setPanelHeight] = useState(170);
     const ideContainerRef = useRef(null);
     const dragPanelRef = useRef(null);
     const [headerSlot, setHeaderSlot] = useState(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const settingsRef = useRef(null);
+
+    useEffect(() => {
+        if (!showSettings) return;
+        const cerrarAlTocarFuera = (e) => {
+            if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+                setShowSettings(false);
+            }
+        };
+        document.addEventListener('pointerdown', cerrarAlTocarFuera);
+        return () => document.removeEventListener('pointerdown', cerrarAlTocarFuera);
+    }, [showSettings]);
 
     useEffect(() => {
         setHeaderSlot(document.getElementById('app-header-actions'));
@@ -142,7 +152,7 @@ export default function EaEditor() {
         const canalSerial = new BroadcastChannel('canal_arduino');
         canalSerial.onmessage = async (mensaje) => {
             if (mensaje.data === 'suelta_el_puerto' && portRef.current) {
-                logConsole("<span style='color: #ff9aa2;'>[INFO] Puerto liberado para otra pestaña.</span>");
+                logConsole('Puerto liberado para otra pestaña.');
                 await desconectar();
             }
         };
@@ -153,29 +163,16 @@ export default function EaEditor() {
         };
     }, []);
 
-    const logConsole = (msg) => {
-        if (consoleRef.current) {
-            consoleRef.current.innerHTML += `${msg}<br>`;
-            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-        }
+    const logConsole = (text, tone = 'info') => {
+        const id = ++logSeqRef.current;
+        setTerminal((prev) => [...prev.slice(-80), { id, text, tone }]);
+        return id;
     };
 
-    const logConsoleLive = (id, html) => {
-        if (!consoleRef.current) return;
-        const el = consoleRef.current.querySelector(`#${id}`);
-        if (el) {
-            el.innerHTML = html;
-        } else {
-            consoleRef.current.innerHTML += `<span id="${id}">${html}</span><br>`;
-        }
-        consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-    };
-
-    const renderProgressBar = (percent) => {
-        const clamped = Math.max(0, Math.min(100, Math.round(percent)));
-        const totalSlots = 10;
-        const filled = Math.round((clamped / 100) * totalSlots);
-        return `[${'█'.repeat(filled)}${'░'.repeat(totalSlots - filled)}] ${clamped}%`;
+    const updateLog = (id, text, tone = 'info', progress = null) => {
+        setTerminal((prev) => (prev.some((e) => e.id === id)
+            ? prev.map((e) => (e.id === id ? { ...e, text, tone, progress } : e))
+            : [...prev.slice(-80), { id, text, tone, progress }]));
     };
 
     const handleFileUpload = (evento) => {
@@ -186,7 +183,7 @@ export default function EaEditor() {
         lector.onload = function(e) {
             const contenido = e.target.result;
             cmInstanceRef.current.setValue(contenido); 
-            logConsole(`<span style="color: #a8e6cf;">[INFO] Archivo <b>${archivo.name}</b> cargado.</span>`);
+            logConsole(`Archivo "${archivo.name}" cargado.`);
         };
         lector.readAsText(archivo);
         evento.target.value = "";
@@ -195,9 +192,9 @@ export default function EaEditor() {
     const handleBaudChange = async (e) => {
         const newBaud = e.target.value;
         setBaudRate(newBaud);
-        logConsole(`<span style="color: #ffd3b6;">[INFO] Baudios modificados a ${newBaud}.</span>`);
+        logConsole(`Monitor Serial a ${newBaud} baudios.`);
         if (portRef.current) {
-            logConsole(`<span style="color: #ff9aa2;">[INFO] Reiniciando conexión...</span>`);
+            logConsole('Reiniciando conexión...');
             await desconectar();
         }
     };
@@ -258,19 +255,19 @@ export default function EaEditor() {
                 await portRef.current.open({ baudRate: selectedBaudRate });
             }
             if (!silent) {
-                logConsole(`<span style="color: #a8e6cf;">[INFO] Escuchando COM (${selectedBaudRate} bps)...</span>`);
+                logConsole(`Escuchando puerto serie (${selectedBaudRate} baudios)...`);
             }
             keepReadingRef.current = true;
             readSerialLoop();
         } catch (e) {
-            logConsole(`<span style="color: #ffaaa5;">[ERROR]: ${errorMessage(e)}</span>`);
+            logConsole(`Error: ${errorMessage(e)}`, 'error');
         }
     };
 
     const conectar = async () => {
         try {
             if (!isSerialSupported) {
-                logConsole(`<span style='color: #ffaaa5;'>[ERROR] ${getSerialUnsupportedMessage()}</span>`);
+                logConsole(getSerialUnsupportedMessage(), 'error');
                 return;
             }
 
@@ -285,20 +282,20 @@ export default function EaEditor() {
                 portRef.current = await serial.requestPort();
             }
             if (usingWebUsbPolyfill) {
-                logConsole(`<span style="color: #dcedc1;">[INFO] Dispositivo vinculado vía WebUSB (polyfill).</span>`);
+                logConsole('Placa conectada (WebUSB).', 'success');
             } else {
-                logConsole(`<span style="color: #dcedc1;">[INFO] Dispositivo vinculado.</span>`);
+                logConsole('Placa conectada.', 'success');
             }
             
             setIsConnected(true);
             await abrirMonitorSerial();
         } catch (error) {
             if (isAndroid && selectedBoard === 'esp32') {
-                logConsole(`<span style='color: #ffaaa5;'>[INFO] Conexión cancelada o no se encontró la placa (se buscó por WebUSB, chip Silicon Labs CP210x). Si tu ESP32 usa otro chip (CH340, FTDI) no es compatible todavía.</span>`);
+                logConsole('Conexión cancelada o no se encontró la placa (se buscó por WebUSB, chip Silicon Labs CP210x). Si tu ESP32 usa otro chip (CH340, FTDI) no es compatible todavía.', 'error');
             } else if (usingWebUsbPolyfill) {
-                logConsole(`<span style='color: #ffaaa5;'>[INFO] Conexión cancelada o dispositivo no compatible con WebUSB (el adaptador debe exponer una interfaz CDC-ACM; adaptadores CP2102/CH340/FTDI no funcionan con este polyfill).</span>`);
+                logConsole('Conexión cancelada o dispositivo no compatible con WebUSB (el adaptador debe exponer una interfaz CDC-ACM; adaptadores CP2102/CH340/FTDI no funcionan con este polyfill).', 'error');
             } else {
-                logConsole(`<span style='color: #ffaaa5;'>[INFO] Conexión cancelada.</span>`);
+                logConsole('Conexión cancelada.');
             }
             portRef.current = null;
         }
@@ -307,7 +304,7 @@ export default function EaEditor() {
     const desconectar = async () => {
         await liberarPuertoPorCompleto();
         setIsConnected(false);
-        logConsole("<span style='color: #ff9aa2;'>[INFO] Dispositivo desconectado.</span>");
+        logConsole('Placa desconectada.');
     };
 
     const toggleConnection = async () => {
@@ -397,9 +394,7 @@ export default function EaEditor() {
         if (!portRef.current) return;
 
         setIsUploading(true);
-        const statusId = `upload-status-${Date.now()}`;
-        const updateStatus = (html) => logConsoleLive(statusId, html);
-        updateStatus(`<span style='color: #ffd3b6;'>[SISTEMA] ${selectedBoard === 'esp32' ? 'Preparando...' : 'Compilando...'}</span>`);
+        const statusId = logConsole(`[SISTEMA] ${selectedBoard === 'esp32' ? 'Preparando...' : 'Compilando...'}`, 'progress');
 
         await liberarPuertoPorCompleto();
         await new Promise(resolve => setTimeout(resolve, 1200));
@@ -407,7 +402,7 @@ export default function EaEditor() {
         const code = cmInstanceRef.current.getValue();
 
         const onProgress = (percent) => {
-            updateStatus(`<span style='color: #ffd3b6;'>[SISTEMA] Subiendo... ${renderProgressBar(percent)}</span>`);
+            updateLog(statusId, '[SISTEMA] Subiendo...', 'progress', Math.max(0, Math.min(100, Math.round(percent))));
         };
 
         let uploadSucceeded = true;
@@ -419,7 +414,7 @@ export default function EaEditor() {
             }
         } catch (err) {
             uploadSucceeded = false;
-            updateStatus(`<span style='color: #ffaaa5;'>[ERROR]:</span><br><pre style="color: #ffaaa5; margin: 0;">${errorMessage(err)}</pre>`);
+            updateLog(statusId, `[ERROR] ${errorMessage(err)}`, 'error');
         }
 
         try {
@@ -432,21 +427,21 @@ export default function EaEditor() {
 
                 await abrirMonitorSerial(true);
                 if (uploadSucceeded) {
-                    updateStatus("<span style='color: #a8e6cf;'>[ÉXITO] Subido con éxito (Escuchando puerto serie)</span>");
+                    updateLog(statusId, '[ÉXITO] Subido con éxito (escuchando puerto serie)', 'success');
                 }
             } else {
                 setIsConnected(false);
-                logConsole("<span style='color: #ffaaa5;'>[ERROR] Dispositivo no detectado tras reiniciar.</span>");
+                logConsole('Placa no detectada tras reiniciar.', 'error');
             }
         } catch (err) {
-            logConsole(`<span style='color: #ffaaa5;'>[ERROR]: ${errorMessage(err)}</span>`);
+            logConsole(`Error: ${errorMessage(err)}`, 'error');
         }
 
         setIsUploading(false);
     };
 
     const clearConsole = () => {
-        if (consoleRef.current) consoleRef.current.innerHTML = "";
+        setTerminal([]);
     };
 
     const iniciarArrastrePanel = (e) => {
@@ -503,7 +498,7 @@ export default function EaEditor() {
             await writer.write(encoder.encode(data));
             setCmdInput('');
         } catch (error) {
-            logConsole(`<span style="color: #ffaaa5;">[ERROR]: ${errorMessage(error)}</span>`);
+            logConsole(`No se pudo enviar el comando: ${errorMessage(error)}`, 'error');
         } finally {
             writer.releaseLock();
         }
@@ -517,32 +512,30 @@ export default function EaEditor() {
 
     const toolbar = (
         <div className="ea-toolbar">
-            <div className="tb-field">
-                <label htmlFor="boardSelect">Placa:</label>
-                <div className="tb-select-wrap">
-                    <span className="tb-select-icon">
-                        <SlidersIcon />
-                    </span>
-                    <select id="boardSelect" title="Placa" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
-                        <option value="esp32">ESP32 (MicroPython)</option>
-                        <option value="arduino">Arduino Uno</option>
-                    </select>
-                </div>
-            </div>
+            <div className={`tb-settings ${showSettings ? 'is-open' : ''}`} ref={settingsRef}>
+                <button type="button" className="tb-settings-toggle" title="Placa y baudios" onClick={() => setShowSettings((v) => !v)}>
+                    <SlidersIcon />
+                </button>
 
-            <div className="tb-field tb-field-baud">
-                <label htmlFor="baudRate">Baudios:</label>
-                <div className="tb-select-wrap">
-                    <span className="tb-select-icon">
-                        <GaugeIcon />
-                    </span>
-                    <select id="baudRate" title="Baudios" value={baudRate} onChange={handleBaudChange}>
-                        <option value="9600">9600</option>
-                        <option value="19200">19200</option>
-                        <option value="38400">38400</option>
-                        <option value="57600">57600</option>
-                        <option value="115200">115200</option>
-                    </select>
+                <div className="tb-settings-panel">
+                    <div className="tb-field">
+                        <label htmlFor="boardSelect">Placa:</label>
+                        <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
+                            <option value="esp32">ESP32 (MicroPython)</option>
+                            <option value="arduino">Arduino Uno</option>
+                        </select>
+                    </div>
+
+                    <div className="tb-field tb-field-baud">
+                        <label htmlFor="baudRate">Baudios:</label>
+                        <select id="baudRate" value={baudRate} onChange={handleBaudChange}>
+                            <option value="9600">9600</option>
+                            <option value="19200">19200</option>
+                            <option value="38400">38400</option>
+                            <option value="57600">57600</option>
+                            <option value="115200">115200</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -630,7 +623,25 @@ export default function EaEditor() {
 
                         <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`} style={{ height: panelHeight }}>
                             <div className={`panel-output-wrap ${showMonitor ? 'is-hidden' : ''}`}>
-                                <div ref={consoleRef} id="console" className="panel-output">Esperando conexión serial...<br/></div>
+                                <div ref={consoleRef} id="console" className="panel-output terminal-log">
+                                    {terminal.length === 0 ? (
+                                        <div className="log-empty">Esperando conexión serial...</div>
+                                    ) : (
+                                        terminal.map((entry) => (
+                                            <div key={entry.id} className={`log-line log-${entry.tone}`}>
+                                                {entry.text}
+                                                {entry.progress != null && (
+                                                    <span className="log-bar">
+                                                        <span className="log-progress-track">
+                                                            <span className="log-progress-fill" style={{ width: `${entry.progress}%` }} />
+                                                        </span>
+                                                        <span className="log-progress-value">{entry.progress}%</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
 
                             <div className={`panel-output-wrap ${showMonitor ? '' : 'is-hidden'}`}>
