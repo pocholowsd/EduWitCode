@@ -1,53 +1,40 @@
-.ea-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-.ea-toolbar button, .ea-toolbar .tb-btn { border: 1px solid transparent; margin: 0; cursor: pointer; font-family: inherit; box-sizing: border-box; transition: all 0.2s ease; }
+.ea-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+.ea-toolbar button, .ea-toolbar .tb-btn { margin: 0; cursor: pointer; font-family: inherit; box-sizing: border-box; transition: all 0.15s ease; }
 
-.ea-toolbar .tb-field { display: flex; align-items: center; gap: 12px; }
-.ea-toolbar .tb-field label { font-size: 15px; font-weight: 500; color: #374151; }
-.ea-toolbar .tb-field select { appearance: none; -webkit-appearance: none; min-width: 210px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0 40px 0 16px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; outline: none; height: 44px; }
-.ea-toolbar .tb-field select:focus { border-color: #93c5fd; }
-.ea-toolbar .tb-field-baud select { min-width: 130px; }
-.ea-toolbar .tb-settings { position: relative; display: flex; align-items: center; }
-.ea-toolbar .tb-settings-toggle { display: none; }
-.ea-toolbar .tb-settings-panel { display: flex; align-items: center; gap: 14px; }
+/* Botones de icono compactos (36px), igual que el editor de bloques */
+.ea-toolbar .tb-label { display: none; }
+.ea-toolbar .tb-btn,
+.ea-toolbar .tb-settings-toggle { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid #dde1e8; border-radius: 8px; background-color: #fff; color: #4a4f59; user-select: none; }
+.ea-toolbar .tb-btn:active, .ea-toolbar .tb-settings-toggle:active { transform: scale(0.95); }
 
-.ea-toolbar .tb-btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; white-space: nowrap; padding: 0 18px; border-radius: 10px; font-size: 15px; font-weight: 600; line-height: 1.2; user-select: none; }
-.ea-toolbar .tb-btn:active { transform: scale(0.96); }
-.ea-toolbar .tb-connect { background-color: #fffbeb; border-color: #fde68a; color: #92400e; }
+.ea-toolbar .tb-connect { order: 1; background-color: #fffbeb; border-color: #fde68a; color: #b45309; }
 .ea-toolbar .tb-connect:hover { background-color: #fef3c7; }
-.ea-toolbar .tb-connect .tb-status { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; font-size: 13px; font-weight: 500; color: #dc2626; }
-.ea-toolbar .tb-connect .tb-status-dot { width: 7px; height: 7px; border-radius: 50%; background-color: #ef4444; }
-.ea-toolbar .tb-connect.is-connected { background-color: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.ea-toolbar .tb-connect .tb-status { position: absolute; top: -3px; right: -3px; display: inline-flex; }
+.ea-toolbar .tb-connect .tb-status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; background-color: #ef4444; }
+.ea-toolbar .tb-connect.is-connected { background-color: #ecfdf5; border-color: #a7f3d0; color: #047857; }
 .ea-toolbar .tb-connect.is-connected:hover { background-color: #d1fae5; }
-.ea-toolbar .tb-connect.is-connected .tb-status { color: #059669; }
 .ea-toolbar .tb-connect.is-connected .tb-status-dot { background-color: #10b981; }
-.ea-toolbar .tb-open { background-color: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
-.ea-toolbar .tb-open:hover { background-color: #dbeafe; }
 
-.ea-toolbar .tb-play { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; background-color: var(--steam-science); color: #fff; }
-.ea-toolbar .tb-play:hover { background-color: #12a37f; }
-.ea-toolbar .tb-play:active { transform: scale(0.96); }
-.ea-toolbar .tb-play:disabled { background-color: #d1d5db; color: #fff; cursor: not-allowed; transform: none; }
+.ea-toolbar .tb-play { order: 2; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; background-color: var(--steam-science); color: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
+.ea-toolbar .tb-play:hover { background-color: #12a37f; transform: scale(1.1); }
+.ea-toolbar .tb-play:active { transform: scale(0.95); }
+.ea-toolbar .tb-play:disabled { background-color: #d5d9e0; color: #fff; cursor: not-allowed; box-shadow: none; transform: none; }
 .ea-toolbar .tb-play.is-uploading svg { animation: tb-pulse 1s ease-in-out infinite; }
 @keyframes tb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-@media (max-width: 640px) {
-    .ea-toolbar { gap: 6px; flex-wrap: nowrap; }
-    .ea-toolbar .tb-label, .ea-toolbar .tb-field label { display: none; }
-    .ea-toolbar .tb-btn { position: relative; flex: 0 0 auto; justify-content: center; width: 40px; height: 40px; padding: 0; }
-    .ea-toolbar .tb-connect { order: 1; }
-    .ea-toolbar .tb-play { order: 2; flex: 0 0 auto; width: 40px; height: 40px; }
-    .ea-toolbar .tb-open { order: 3; }
-    .ea-toolbar .tb-settings { order: 4; flex: 0 0 auto; }
-    .ea-toolbar .tb-connect .tb-status { position: absolute; top: 5px; right: 5px; margin: 0; }
-    .ea-toolbar .tb-connect .tb-status-dot { width: 8px; height: 8px; }
-    .ea-toolbar .tb-settings-toggle { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #f9fafb; color: #4b5563; }
-    .ea-toolbar .tb-settings.is-open .tb-settings-toggle { background-color: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
-    .ea-toolbar .tb-settings-panel { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; flex-direction: column; align-items: stretch; gap: 12px; width: min(260px, calc(100vw - 24px)); padding: 14px; background-color: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 28px rgba(15,23,42,0.16); box-sizing: border-box; }
-    .ea-toolbar .tb-settings.is-open .tb-settings-panel { display: flex; }
-    .ea-toolbar .tb-settings-panel .tb-field { flex-direction: column; align-items: stretch; gap: 6px; }
-    .ea-toolbar .tb-settings-panel .tb-field label { display: block; font-size: 13px; }
-    .ea-toolbar .tb-settings-panel .tb-field select { width: 100%; min-width: 0; height: 40px; font-size: 14px; }
-}
+.ea-toolbar .tb-open { order: 3; background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
+.ea-toolbar .tb-open:hover { background-color: #ccfbf1; }
+
+/* Placa y baudios dentro de un menú desplegable */
+.ea-toolbar .tb-settings { order: 4; position: relative; display: flex; flex: 0 0 auto; align-items: center; }
+.ea-toolbar .tb-settings-toggle:hover { border-color: var(--steam-science); }
+.ea-toolbar .tb-settings.is-open .tb-settings-toggle { background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
+.ea-toolbar .tb-settings-panel { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; flex-direction: column; align-items: stretch; gap: 12px; width: min(260px, calc(100vw - 24px)); padding: 14px; background-color: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 28px rgba(15,23,42,0.16); box-sizing: border-box; }
+.ea-toolbar .tb-settings.is-open .tb-settings-panel { display: flex; }
+.ea-toolbar .tb-field { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.ea-toolbar .tb-field label { display: block; font-size: 13px; font-weight: 500; color: #374151; }
+.ea-toolbar .tb-field select { appearance: none; -webkit-appearance: none; width: 100%; height: 40px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0 40px 0 14px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; outline: none; }
+.ea-toolbar .tb-field select:focus { border-color: #93c5fd; }
 
 .ea-editor-container { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
