@@ -21,8 +21,9 @@ function AppShell() {
           <div className="app-brand-badge">
             <BrandIcon />
           </div>
-          <div>
-            <h1 className="app-brand-title">Editor + Monitor Serial</h1>
+          <div className="app-brand-text">
+            <h1 className="app-brand-title">EduCode Studio</h1>
+            <span className="app-brand-subtitle">Programación por código</span>
           </div>
         </div>
         <div id="app-header-actions" className="app-header-actions" />
