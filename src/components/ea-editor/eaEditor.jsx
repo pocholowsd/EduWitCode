@@ -4,6 +4,7 @@ import CodeMirror from 'codemirror';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/dracula.css';
 import 'codemirror/mode/python/python';
+import 'codemirror/mode/clike/clike';
 import './ea-editor.css';
 import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
@@ -93,6 +94,16 @@ function ChevronIcon({ open }) {
 
 const MONITOR_MAX_CHARS = 40000;
 
+const CODIGO_BASE = {
+    esp32: `from machine import Pin\nimport time\n\nled = Pin(2, Pin.OUT)\n\nwhile True:\n    led.value(1)\n    print("System Ready")\n    time.sleep(1)\n    led.value(0)\n    time.sleep(1)\n`,
+    arduino: `const int LED = 13;\n\nvoid setup() {\n    pinMode(LED, OUTPUT);\n    Serial.begin(115200);\n}\n\nvoid loop() {\n    digitalWrite(LED, HIGH);\n    Serial.println("System Ready");\n    delay(1000);\n    digitalWrite(LED, LOW);\n    delay(1000);\n}\n`,
+};
+
+const MODO_EDITOR = {
+    esp32: 'python',
+    arduino: 'text/x-c++src',
+};
+
 export default function EaEditor() {
     const editorTextAreaRef = useRef(null);
     const cmInstanceRef = useRef(null);
@@ -146,11 +157,11 @@ export default function EaEditor() {
         if (!cmInstanceRef.current && editorTextAreaRef.current) {
             cmInstanceRef.current = CodeMirror.fromTextArea(editorTextAreaRef.current, {
                 lineNumbers: true,
-                mode: "python",
+                mode: MODO_EDITOR[selectedBoard],
                 theme: "dracula",
                 lineWrapping: true
             });
-            cmInstanceRef.current.setValue(`from machine import Pin\nimport time\n\nled = Pin(2, Pin.OUT)\n\nwhile True:\n    led.value(1)\n    print("System Ready")\n    time.sleep(1)\n    led.value(0)\n    time.sleep(1)\n`);
+            cmInstanceRef.current.setValue(CODIGO_BASE[selectedBoard]);
         }
 
         const canalSerial = new BroadcastChannel('canal_arduino');
@@ -191,6 +202,20 @@ export default function EaEditor() {
         };
         lector.readAsText(archivo);
         evento.target.value = "";
+    };
+
+    const handleBoardChange = (e) => {
+        const nuevaPlaca = e.target.value;
+        const cm = cmInstanceRef.current;
+        if (cm) {
+            const actual = cm.getValue();
+            const sinCambios = actual.trim() === '' || actual === CODIGO_BASE[selectedBoard];
+            if (sinCambios || window.confirm('¿Reemplazar el código actual por el ejemplo base de la nueva placa?')) {
+                cm.setValue(CODIGO_BASE[nuevaPlaca]);
+            }
+            cm.setOption('mode', MODO_EDITOR[nuevaPlaca]);
+        }
+        setSelectedBoard(nuevaPlaca);
     };
 
     const handleBaudChange = async (e) => {
@@ -552,7 +577,7 @@ export default function EaEditor() {
                 <div className="tb-settings-panel">
                     <div className="tb-field">
                         <label htmlFor="boardSelect">Placa:</label>
-                        <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
+                        <select id="boardSelect" value={selectedBoard} onChange={handleBoardChange}>
                             <option value="esp32">MicroPython</option>
                             <option value="arduino">Arduino C</option>
                         </select>
