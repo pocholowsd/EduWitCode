@@ -99,6 +99,21 @@ const CODIGO_BASE = {
     arduino: `const int LED = 13;\n\nvoid setup() {\n    pinMode(LED, OUTPUT);\n    Serial.begin(115200);\n}\n\nvoid loop() {\n    digitalWrite(LED, HIGH);\n    Serial.println("System Ready");\n    delay(1000);\n    digitalWrite(LED, LOW);\n    delay(1000);\n}\n`,
 };
 
+const CODIGO_VACIO = {
+    esp32: ``,
+    arduino: `void setup() {\n\n}\n\nvoid loop() {\n\n}\n`,
+};
+
+const NOMBRE_ARCHIVO = {
+    esp32: 'main.py',
+    arduino: 'sketch.ino',
+};
+
+const NOMBRE_PLACA = {
+    esp32: 'MicroPython',
+    arduino: 'Arduino C',
+};
+
 const MODO_EDITOR = {
     esp32: 'python',
     arduino: 'text/x-c++src',
@@ -120,6 +135,7 @@ export default function EaEditor() {
     const [isUploading, setIsUploading] = useState(false);
     const [baudRate, setBaudRate] = useState("115200");
     const [selectedBoard, setSelectedBoard] = useState("esp32");
+    const [placaPendiente, setPlacaPendiente] = useState(null);
     const [showMonitor, setShowMonitor] = useState(false);
     const [showCmdBar, setShowCmdBar] = useState(false);
     const [lineEnding, setLineEnding] = useState("nl");
@@ -204,18 +220,31 @@ export default function EaEditor() {
         evento.target.value = "";
     };
 
+    const guardarPrograma = () => {
+        const blob = new Blob([cmInstanceRef.current.getValue()], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = NOMBRE_ARCHIVO[selectedBoard];
+        enlace.click();
+        URL.revokeObjectURL(url);
+        logConsole(`Programa guardado como "${NOMBRE_ARCHIVO[selectedBoard]}".`);
+    };
+
+    const cambiarPlaca = (nuevaPlaca) => {
+        const cm = cmInstanceRef.current;
+        cm.setOption('mode', MODO_EDITOR[nuevaPlaca]);
+        cm.setValue(CODIGO_VACIO[nuevaPlaca]);
+        setSelectedBoard(nuevaPlaca);
+        setPlacaPendiente(null);
+    };
+
     const handleBoardChange = (e) => {
         const nuevaPlaca = e.target.value;
-        const cm = cmInstanceRef.current;
-        if (cm) {
-            const actual = cm.getValue();
-            const sinCambios = actual.trim() === '' || actual === CODIGO_BASE[selectedBoard];
-            if (sinCambios || window.confirm('¿Reemplazar el código actual por el ejemplo base de la nueva placa?')) {
-                cm.setValue(CODIGO_BASE[nuevaPlaca]);
-            }
-            cm.setOption('mode', MODO_EDITOR[nuevaPlaca]);
-        }
-        setSelectedBoard(nuevaPlaca);
+        const actual = cmInstanceRef.current.getValue();
+        const sinCambios = actual.trim() === CODIGO_VACIO[selectedBoard].trim() || actual === CODIGO_BASE[selectedBoard];
+        if (sinCambios) cambiarPlaca(nuevaPlaca);
+        else setPlacaPendiente(nuevaPlaca);
     };
 
     const handleBaudChange = async (e) => {
@@ -626,7 +655,7 @@ export default function EaEditor() {
                 <FolderIcon />
                 <span className="tb-label">Cargar</span>
             </label>
-            <input type="file" id="fileInput" accept=".py" style={{ display: 'none' }} onChange={handleFileUpload} />
+            <input type="file" id="fileInput" accept=".py,.ino"style={{ display: 'none' }} onChange={handleFileUpload} />
         </div>
     );
 
@@ -747,6 +776,20 @@ export default function EaEditor() {
                     </div>
                 </div>
             </div>
+
+            {placaPendiente && (
+                <div className="board-modal-backdrop" onClick={() => setPlacaPendiente(null)}>
+                    <div className="board-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                        <h3>Cambiar a {NOMBRE_PLACA[placaPendiente]}</h3>
+                        <p>Se creará un programa vacío. ¿Quieres guardar el programa actual ({NOMBRE_ARCHIVO[selectedBoard]}) antes de continuar?</p>
+                        <div className="board-modal-actions">
+                            <button type="button" className="board-modal-btn" onClick={() => setPlacaPendiente(null)}>Cancelar</button>
+                            <button type="button" className="board-modal-btn" onClick={() => cambiarPlaca(placaPendiente)}>No guardar</button>
+                            <button type="button" className="board-modal-btn is-primary" onClick={() => { guardarPrograma(); cambiarPlaca(placaPendiente); }}>Guardar y crear nuevo</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -163,3 +163,12 @@
         flex: 0 0 auto;
     }
 }
+.ea-editor-container .board-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background-color: rgba(0, 0, 0, 0.55); }
+.ea-editor-container .board-modal { width: 100%; max-width: 420px; padding: 20px; background-color: #1f222b; border: 1px solid #333744; border-radius: 10px; color: #cbd5e1; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); }
+.ea-editor-container .board-modal h3 { margin: 0 0 8px; font-size: 16px; color: #f1f5f9; }
+.ea-editor-container .board-modal p { margin: 0 0 18px; font-size: 14px; line-height: 1.5; }
+.ea-editor-container .board-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ea-editor-container .board-modal-btn { height: 34px; padding: 0 14px; background-color: #282c37; border: 1px solid #333744; border-radius: 6px; color: #cbd5e1; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ea-editor-container .board-modal-btn:hover { background-color: #323743; }
+.ea-editor-container .board-modal-btn.is-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+.ea-editor-container .board-modal-btn.is-primary:hover { background-color: #1d4ed8; }
