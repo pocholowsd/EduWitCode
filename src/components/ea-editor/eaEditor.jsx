@@ -553,8 +553,8 @@ export default function EaEditor() {
                     <div className="tb-field">
                         <label htmlFor="boardSelect">Placa:</label>
                         <select id="boardSelect" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)}>
-                            <option value="esp32">ESP32 (MicroPython)</option>
-                            <option value="arduino">Arduino Uno</option>
+                            <option value="esp32">MicroPython</option>
+                            <option value="arduino">Arduino C</option>
                         </select>
                     </div>
 
