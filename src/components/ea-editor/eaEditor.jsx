@@ -82,6 +82,14 @@ function FolderIcon() {
     );
 }
 
+function SaveIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
+    );
+}
+
 function ChevronIcon({ open }) {
     return (
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -104,9 +112,14 @@ const CODIGO_VACIO = {
     arduino: `void setup() {\n\n}\n\nvoid loop() {\n\n}\n`,
 };
 
-const NOMBRE_ARCHIVO = {
-    esp32: 'main.py',
-    arduino: 'sketch.ino',
+const NOMBRE_DEFAULT = {
+    esp32: 'main',
+    arduino: 'sketch',
+};
+
+const EXTENSION = {
+    esp32: '.py',
+    arduino: '.ino',
 };
 
 const NOMBRE_PLACA = {
@@ -136,6 +149,9 @@ export default function EaEditor() {
     const [baudRate, setBaudRate] = useState("115200");
     const [selectedBoard, setSelectedBoard] = useState("esp32");
     const [placaPendiente, setPlacaPendiente] = useState(null);
+    const [nombrePrograma, setNombrePrograma] = useState(NOMBRE_DEFAULT.esp32);
+    // { nombre, placaDespues }: placaDespues indica a qué placa cambiar tras guardar
+    const [guardarDialogo, setGuardarDialogo] = useState(null);
     const [showMonitor, setShowMonitor] = useState(false);
     const [showCmdBar, setShowCmdBar] = useState(false);
     const [lineEnding, setLineEnding] = useState("nl");
@@ -213,22 +229,35 @@ export default function EaEditor() {
         const lector = new FileReader();
         lector.onload = function(e) {
             const contenido = e.target.result;
-            cmInstanceRef.current.setValue(contenido); 
+            cmInstanceRef.current.setValue(contenido);
+            setNombrePrograma(archivo.name.replace(/\.[^.]+$/, ''));
             logConsole(`Archivo "${archivo.name}" cargado.`);
         };
         lector.readAsText(archivo);
         evento.target.value = "";
     };
 
-    const guardarPrograma = () => {
+    const abrirGuardar = (placaDespues = null) => {
+        setPlacaPendiente(null);
+        setGuardarDialogo({ nombre: nombrePrograma, placaDespues });
+    };
+
+    const confirmarGuardar = (e) => {
+        e.preventDefault();
+        const nombre = guardarDialogo.nombre.trim().replace(/\.(py|ino)$/i, '').replace(/[\\/:*?"<>|]/g, '_');
+        if (!nombre) return;
+        const archivo = nombre + EXTENSION[selectedBoard];
         const blob = new Blob([cmInstanceRef.current.getValue()], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement('a');
         enlace.href = url;
-        enlace.download = NOMBRE_ARCHIVO[selectedBoard];
+        enlace.download = archivo;
         enlace.click();
         URL.revokeObjectURL(url);
-        logConsole(`Programa guardado como "${NOMBRE_ARCHIVO[selectedBoard]}".`);
+        logConsole(`Programa guardado como "${archivo}".`);
+        setNombrePrograma(nombre);
+        if (guardarDialogo.placaDespues) cambiarPlaca(guardarDialogo.placaDespues);
+        setGuardarDialogo(null);
     };
 
     const cambiarPlaca = (nuevaPlaca) => {
@@ -236,6 +265,7 @@ export default function EaEditor() {
         cm.setOption('mode', MODO_EDITOR[nuevaPlaca]);
         cm.setValue(CODIGO_VACIO[nuevaPlaca]);
         setSelectedBoard(nuevaPlaca);
+        setNombrePrograma(NOMBRE_DEFAULT[nuevaPlaca]);
         setPlacaPendiente(null);
     };
 
@@ -655,7 +685,12 @@ export default function EaEditor() {
                 <FolderIcon />
                 <span className="tb-label">Cargar</span>
             </label>
-            <input type="file" id="fileInput" accept=".py,.ino"style={{ display: 'none' }} onChange={handleFileUpload} />
+            <input type="file" id="fileInput" accept=".py,.ino" style={{ display: 'none' }} onChange={handleFileUpload} />
+
+            <button type="button" className="tb-btn tb-open" title="Guardar" onClick={() => abrirGuardar()}>
+                <SaveIcon />
+                <span className="tb-label">Guardar</span>
+            </button>
         </div>
     );
 
@@ -670,7 +705,7 @@ export default function EaEditor() {
                             <span className="ide-dot ide-dot-yellow" />
                             <span className="ide-dot ide-dot-green" />
                         </div>
-                        <span className="ide-filename">{selectedBoard === 'esp32' ? 'main.py' : 'sketch.ino'}</span>
+                        <span className="ide-filename">{nombrePrograma + EXTENSION[selectedBoard]}</span>
                         <div className="ide-titlebar-actions">
                             <button type="button" className="ide-icon-btn" title="Copiar código" onClick={copiarCodigo}>
                                 <CopyIcon />
@@ -781,13 +816,40 @@ export default function EaEditor() {
                 <div className="board-modal-backdrop" onClick={() => setPlacaPendiente(null)}>
                     <div className="board-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
                         <h3>Cambiar a {NOMBRE_PLACA[placaPendiente]}</h3>
-                        <p>Se creará un programa vacío. ¿Quieres guardar el programa actual ({NOMBRE_ARCHIVO[selectedBoard]}) antes de continuar?</p>
+                        <p>Se creará un programa vacío. ¿Quieres guardar el programa actual ({nombrePrograma + EXTENSION[selectedBoard]}) antes de continuar?</p>
                         <div className="board-modal-actions">
                             <button type="button" className="board-modal-btn" onClick={() => setPlacaPendiente(null)}>Cancelar</button>
                             <button type="button" className="board-modal-btn" onClick={() => cambiarPlaca(placaPendiente)}>No guardar</button>
-                            <button type="button" className="board-modal-btn is-primary" onClick={() => { guardarPrograma(); cambiarPlaca(placaPendiente); }}>Guardar y crear nuevo</button>
+                            <button type="button" className="board-modal-btn is-primary" onClick={() => abrirGuardar(placaPendiente)}>Guardar y crear nuevo</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {guardarDialogo && (
+                <div className="board-modal-backdrop" onClick={() => setGuardarDialogo(null)}>
+                    <form className="board-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} onSubmit={confirmarGuardar}>
+                        <h3>Guardar programa</h3>
+                        <label htmlFor="nombreArchivo" className="board-modal-label">Nombre del archivo</label>
+                        <div className="board-modal-filename">
+                            <input
+                                id="nombreArchivo"
+                                type="text"
+                                autoFocus
+                                value={guardarDialogo.nombre}
+                                onChange={(e) => setGuardarDialogo((d) => ({ ...d, nombre: e.target.value }))}
+                                onFocus={(e) => e.target.select()}
+                                onKeyDown={(e) => { if (e.key === 'Escape') setGuardarDialogo(null); }}
+                            />
+                            <span>{EXTENSION[selectedBoard]}</span>
+                        </div>
+                        <div className="board-modal-actions">
+                            <button type="button" className="board-modal-btn" onClick={() => setGuardarDialogo(null)}>Cancelar</button>
+                            <button type="submit" className="board-modal-btn is-primary" disabled={!guardarDialogo.nombre.trim()}>
+                                {guardarDialogo.placaDespues ? 'Guardar y crear nuevo' : 'Descargar'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </div>
