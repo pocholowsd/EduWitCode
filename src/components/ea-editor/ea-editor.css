@@ -24,6 +24,9 @@
 
 .ea-toolbar .tb-open { order: 3; background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
 .ea-toolbar .tb-open:hover { background-color: #ccfbf1; }
+.ea-toolbar .tb-link { order: 3; background-color: #f0f9ff; border-color: #bae6fd; color: #075985; }
+.ea-toolbar .tb-link:hover { background-color: #e0f2fe; }
+.ea-toolbar .tb-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* Placa y baudios dentro de un menú desplegable */
 .ea-toolbar .tb-settings { order: 4; position: relative; display: flex; flex: 0 0 auto; align-items: center; }

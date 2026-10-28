@@ -10,6 +10,18 @@ import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
 import { flashAvrHex, AVR_BOARD_PROFILES } from '../../api/stk500';
 import { MICROPYTHON_BAUD, tieneMicroPython, subirCodigoMicroPython, flashearFirmwareMicroPython } from '../../api/esp32MicroPython';
+import CuentaHeader, { EnlaceModal } from '../cuenta/CuentaHeader';
+import LoginModal from '../cuenta/auth/LoginModal';
+import ProfileModal from '../cuenta/auth/ProfileModal';
+import ProjectsModal from '../cuenta/projects/ProjectsModal';
+import SaveProjectModal from '../cuenta/SaveProjectModal';
+import UnsavedChangesModal from '../cuenta/UnsavedChangesModal';
+import { codigoFromLocation, shareUrl } from '../cuenta/projects/shareLink';
+import {
+    getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
+    getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
+    createProyectoUsuario, updateProyectoUsuario, updateAccesoProyecto,
+} from '../cuenta/authApi';
 
 function MonitorIcon() {
     return (
@@ -90,6 +102,24 @@ function SaveIcon() {
     );
 }
 
+function CloudIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1 0 9.5" />
+            <path d="M12 12v8M9 15l3-3 3 3" />
+        </svg>
+    );
+}
+
+function LinkIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
+            <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+        </svg>
+    );
+}
+
 function ChevronIcon({ open }) {
     return (
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -132,6 +162,13 @@ const MODO_EDITOR = {
     arduino: 'text/x-c++src',
 };
 
+// Programa guardado en la cuenta. remoteId null = aún no está guardado en la nube.
+const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, savedSnapshot: null };
+
+const esCodigoInicial = (codigo, placa) => codigo.trim() === CODIGO_VACIO[placa].trim() || codigo === CODIGO_BASE[placa];
+
+const nombreArchivo = (nombre) => nombre.trim().replace(/\.(py|ino)$/i, '').replace(/[\\/:*?"<>|]/g, '_');
+
 export default function EaEditor() {
     const editorTextAreaRef = useRef(null);
     const cmInstanceRef = useRef(null);
@@ -152,6 +189,18 @@ export default function EaEditor() {
     const [nombrePrograma, setNombrePrograma] = useState(NOMBRE_DEFAULT.esp32);
     // { nombre, placaDespues }: placaDespues indica a qué placa cambiar tras guardar
     const [guardarDialogo, setGuardarDialogo] = useState(null);
+    const [proyecto, setProyecto] = useState(PROYECTO_NUEVO);
+    const [user, setUser] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [saveModalOpen, setSaveModalOpen] = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [projectsModalOpen, setProjectsModalOpen] = useState(false);
+    const [enlaceOpen, setEnlaceOpen] = useState(false);
+    const [unsavedPromptOpen, setUnsavedPromptOpen] = useState(false);
+    // Acción que espera al aviso de guardar: 'logout' | 'switch' | { type: 'open', id, source }.
+    const [pendingAction, setPendingAction] = useState(null);
     const [showMonitor, setShowMonitor] = useState(false);
     const [showCmdBar, setShowCmdBar] = useState(false);
     const [lineEnding, setLineEnding] = useState("nl");
@@ -231,6 +280,7 @@ export default function EaEditor() {
             const contenido = e.target.result;
             cmInstanceRef.current.setValue(contenido);
             setNombrePrograma(archivo.name.replace(/\.[^.]+$/, ''));
+            setProyecto(PROYECTO_NUEVO);
             logConsole(`Archivo "${archivo.name}" cargado.`);
         };
         lector.readAsText(archivo);
@@ -267,15 +317,194 @@ export default function EaEditor() {
         setSelectedBoard(nuevaPlaca);
         setNombrePrograma(NOMBRE_DEFAULT[nuevaPlaca]);
         setPlacaPendiente(null);
+        setProyecto(PROYECTO_NUEVO);
     };
 
     const handleBoardChange = (e) => {
         const nuevaPlaca = e.target.value;
-        const actual = cmInstanceRef.current.getValue();
-        const sinCambios = actual.trim() === CODIGO_VACIO[selectedBoard].trim() || actual === CODIGO_BASE[selectedBoard];
-        if (sinCambios) cambiarPlaca(nuevaPlaca);
+        if (esCodigoInicial(cmInstanceRef.current.getValue(), selectedBoard)) cambiarPlaca(nuevaPlaca);
         else setPlacaPendiente(nuevaPlaca);
     };
+
+    useEffect(() => {
+        const syncUser = () => {
+            if (!getToken()) { setUser(null); return; }
+            fetchMe()
+                .then((data) => setUser(data.user))
+                .catch(() => { clearToken(); setUser(null); });
+        };
+        syncUser();
+        // Otra pestaña inició o cerró sesión: el token es compartido, así que hay que reflejar esa cuenta aquí.
+        const onStorage = (e) => { if (e.key === TOKEN_STORAGE_KEY || e.key === null) syncUser(); };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
+
+    // Al cerrar sesión o cambiar de cuenta, lo abierto pertenece a la cuenta anterior: se empieza un programa vacío.
+    const lastUserId = useRef(null);
+    useEffect(() => {
+        const currentId = user?.id ?? null;
+        if (lastUserId.current !== null && lastUserId.current !== currentId) {
+            cmInstanceRef.current?.setValue(CODIGO_VACIO[selectedBoard]);
+            setNombrePrograma(NOMBRE_DEFAULT[selectedBoard]);
+            setProyecto(PROYECTO_NUEVO);
+        }
+        if (currentId !== null || lastUserId.current !== null) lastUserId.current = currentId;
+    }, [user?.id]);
+
+    const snapshotActual = () => `${selectedBoard}\n${cmInstanceRef.current.getValue()}`;
+
+    const neverSaved = !proyecto.remoteId;
+    // Cuentas creadas antes de que el alias fuera obligatorio: deben elegir uno al entrar.
+    const aliasMissing = Boolean(user && !user.alias);
+    // Sin guardar en la nube, solo se pregunta si el código no es la plantilla inicial (como al cambiar de placa).
+    const hayCambiosSinGuardar = () => (neverSaved
+        ? !esCodigoInicial(cmInstanceRef.current.getValue(), selectedBoard)
+        : snapshotActual() !== proyecto.savedSnapshot);
+
+    const handleGuardarNube = () => {
+        if (!user) { setLoginModalOpen(true); return; }
+        if (saving) return;
+        setSaveError('');
+        setSaveModalOpen(true);
+    };
+
+    const handleConfirmSave = async (nombre, access) => {
+        if (saving) return;
+        setSaving(true);
+        setSaveError('');
+        const contenido = cmInstanceRef.current.getValue();
+        const board = NOMBRE_PLACA[selectedBoard];
+        const savedSnapshot = snapshotActual();
+        let remoteId = proyecto.remoteId;
+        try {
+            if (remoteId) {
+                await updateProyectoUsuario(remoteId, { nombre, board, contenido });
+                setProyecto((p) => ({ ...p, nombre, savedSnapshot }));
+                logConsole(`Proyecto "${nombre}" actualizado en la nube.`, 'success');
+            } else {
+                const data = await createProyectoUsuario(nombre, board, contenido, proyecto.origenCodigo);
+                remoteId = data.proyecto.id;
+                const esCopia = data.proyecto.esCopia;
+                setProyecto((p) => ({ ...p, nombre, remoteId, esCopia, savedSnapshot }));
+                if (esCopia) logConsole('Se guardó como copia en tu Biblioteca.');
+                logConsole(`Proyecto "${nombre}" guardado en la nube.`, 'success');
+            }
+            setNombrePrograma(nombreArchivo(nombre) || NOMBRE_DEFAULT[selectedBoard]);
+        } catch (err) {
+            setSaveError(`No se pudo guardar: ${err.message}`);
+            setSaving(false);
+            return;
+        }
+        try {
+            if (!access) {
+                setSaveModalOpen(false);
+                if (pendingAction) { setPendingAction(null); runAction(pendingAction); }
+                return;
+            }
+            const accessData = await updateAccesoProyecto(remoteId, access.acceso);
+            const codigo = accessData.acceso === 'compartido' ? accessData.codigo : null;
+            setProyecto((p) => ({ ...p, codigo }));
+            if (codigo) logConsole(`Enlace para compartir: ${shareUrl(accessData.codigo)}`, 'success');
+            setSaveModalOpen(false);
+            if (pendingAction) {
+                setPendingAction(null);
+                runAction(pendingAction);
+            }
+        } catch (err) {
+            setSaveError(`El programa se guardó, pero no se pudo cambiar el acceso: ${err.message}`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAuthenticated = (nextUser) => {
+        setUser(nextUser);
+        setLoginModalOpen(false);
+        if (pendingAction) setSaveModalOpen(true);
+    };
+
+    const logout = () => {
+        clearToken();
+        setUser(null);
+    };
+
+    const runAction = (action) => {
+        if (action === 'logout') logout();
+        if (action === 'switch') { logout(); setLoginModalOpen(true); }
+        if (action?.type === 'open') abrirProyecto(action.id, action.source);
+    };
+
+    // Antes de Cerrar sesión, Cambiar de cuenta o abrir otro programa, ofrecer guardar lo que se perdería.
+    const requestAction = (action) => {
+        if (hayCambiosSinGuardar()) {
+            setPendingAction(action);
+            setUnsavedPromptOpen(true);
+        } else {
+            runAction(action);
+        }
+    };
+
+    const handleUnsavedSave = () => {
+        setUnsavedPromptOpen(false);
+        setSaveError('');
+        if (user) setSaveModalOpen(true);
+        else setLoginModalOpen(true);
+    };
+
+    const handleUnsavedDiscard = () => {
+        setUnsavedPromptOpen(false);
+        setPendingAction(null);
+        runAction(pendingAction);
+    };
+
+    // source 'codigo': id es el código de referencia. Con sesión, la dueña recibe el original y los demás
+    // su copia en la Biblioteca; sin sesión se abre sin guardar y se convierte en copia al guardarlo.
+    const abrirProyecto = async (id, source) => {
+        try {
+            const loggedIn = Boolean(getToken());
+            const loaders = {
+                usuario: getProyectoUsuario,
+                publico: getProyectoPublico,
+                codigo: loggedIn ? copiarProyectoPorCodigo : getProyectoPorCodigo,
+            };
+            const data = await loaders[source](id);
+            const p = data.proyecto;
+            const placa = Object.keys(NOMBRE_PLACA).find((k) => NOMBRE_PLACA[k] === p.board) ?? selectedBoard;
+            const cm = cmInstanceRef.current;
+            cm.setOption('mode', MODO_EDITOR[placa]);
+            cm.setValue(p.contenido);
+            setSelectedBoard(placa);
+            setPlacaPendiente(null);
+            setNombrePrograma(nombreArchivo(p.nombre) || NOMBRE_DEFAULT[placa]);
+            setProyecto({
+                remoteId: source === 'usuario' || (source === 'codigo' && loggedIn) ? p.id : null,
+                nombre: p.nombre,
+                codigo: p.codigo ?? null,
+                esCopia: p.esCopia,
+                origenCodigo: source === 'codigo' && !loggedIn ? id : null,
+                savedSnapshot: `${placa}\n${cm.getValue()}`,
+            });
+            logConsole(`Proyecto "${p.nombre}" cargado.`);
+            if (source === 'codigo') {
+                if (!loggedIn) logConsole('Inicia sesión y guarda para tener tu copia en la Biblioteca.');
+                else if (data.existente) logConsole(`Ya tenías una copia de este programa de ${p.autor}; se abrió tu copia de la Biblioteca.`);
+                else if (!data.propio) logConsole(`Se creó una copia del programa de ${p.autor} en tu Biblioteca. Los cambios se guardan solo en tu copia.`);
+            }
+        } catch (err) {
+            logConsole(`Error al abrir el proyecto: ${err.message}`, 'error');
+        }
+    };
+
+    // Al entrar por un enlace /code/<codigo>, se abre ese programa y la URL vuelve a la raíz.
+    const openedFromLink = useRef(false);
+    useEffect(() => {
+        const codigo = codigoFromLocation();
+        if (!codigo || openedFromLink.current) return;
+        openedFromLink.current = true;
+        window.history.replaceState(null, '', '/');
+        abrirProyecto(codigo, 'codigo');
+    }, []);
 
     const handleBaudChange = async (e) => {
         const newBaud = e.target.value;
@@ -687,16 +916,42 @@ export default function EaEditor() {
             </label>
             <input type="file" id="fileInput" accept=".py,.ino" style={{ display: 'none' }} onChange={handleFileUpload} />
 
-            <button type="button" className="tb-btn tb-open" title="Guardar" onClick={() => abrirGuardar()}>
+            <button type="button" className="tb-btn tb-open" title="Descargar archivo" onClick={() => abrirGuardar()}>
                 <SaveIcon />
-                <span className="tb-label">Guardar</span>
+                <span className="tb-label">Descargar</span>
             </button>
+
+            <button type="button" className="tb-btn tb-open" title="Guardar en tu cuenta" onClick={handleGuardarNube} disabled={saving}>
+                <CloudIcon />
+                <span className="tb-label">{saving ? 'Guardando…' : 'Guardar'}</span>
+            </button>
+
+            {proyecto.codigo && (
+                <button type="button" className="tb-btn tb-link" title="Ver el enlace para compartir" onClick={() => setEnlaceOpen(true)}>
+                    <LinkIcon />
+                    <span className="tb-label">Enlace</span>
+                </button>
+            )}
         </div>
+    );
+
+    const barraSuperior = (
+        <>
+            {toolbar}
+            <CuentaHeader
+                user={user}
+                onLogin={() => setLoginModalOpen(true)}
+                onOpenProjects={() => setProjectsModalOpen(true)}
+                onOpenProfile={() => setProfileModalOpen(true)}
+                onSwitchAccount={() => requestAction('switch')}
+                onLogout={() => requestAction('logout')}
+            />
+        </>
     );
 
     return (
         <div className="ea-editor-container">
-            {headerSlot ? createPortal(toolbar, headerSlot) : toolbar}
+            {headerSlot ? createPortal(barraSuperior, headerSlot) : barraSuperior}
             <div className="container">
                 <div className="ide-container" ref={ideContainerRef}>
                     <div className="ide-titlebar">
@@ -852,6 +1107,47 @@ export default function EaEditor() {
                     </form>
                 </div>
             )}
+
+            <SaveProjectModal
+                open={saveModalOpen}
+                initialName={proyecto.nombre ?? nombrePrograma}
+                remoteId={proyecto.remoteId}
+                showAccess={!proyecto.esCopia && !proyecto.origenCodigo}
+                saving={saving}
+                error={saveError}
+                onClose={() => { setSaveModalOpen(false); setPendingAction(null); }}
+                onSubmit={handleConfirmSave}
+            />
+            <UnsavedChangesModal
+                open={unsavedPromptOpen}
+                projectName={proyecto.nombre ?? nombrePrograma + EXTENSION[selectedBoard]}
+                neverSaved={neverSaved}
+                onSave={handleUnsavedSave}
+                onDiscard={handleUnsavedDiscard}
+                onClose={() => { setUnsavedPromptOpen(false); setPendingAction(null); }}
+            />
+            <LoginModal
+                open={loginModalOpen}
+                onClose={() => { setLoginModalOpen(false); setPendingAction(null); }}
+                onAuthenticated={handleAuthenticated}
+            />
+            <ProfileModal
+                open={profileModalOpen || aliasMissing}
+                onClose={() => setProfileModalOpen(false)}
+                requireAlias={aliasMissing}
+                onLogout={logout}
+                user={user}
+                onUpdated={setUser}
+            />
+            <ProjectsModal
+                open={projectsModalOpen}
+                onClose={() => setProjectsModalOpen(false)}
+                isAuthenticated={!!user}
+                userId={user?.id}
+                onRequireLogin={() => setLoginModalOpen(true)}
+                onOpenProject={(id, source) => requestAction({ type: 'open', id, source })}
+            />
+            <EnlaceModal open={enlaceOpen} codigo={proyecto.codigo} onClose={() => setEnlaceOpen(false)} />
         </div>
     );
 }

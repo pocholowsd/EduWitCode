@@ -13,10 +13,20 @@ services:
     build: .
     container_name: eduwit_code_app
     restart: unless-stopped
+    # Cuentas y programas guardados: misma base MySQL que el editor de bloques.
+    environment:
+      DB_HOST: ${DB_HOST:-}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-eduwit_go}
+      JWT_SECRET: ${JWT_SECRET:-}
     networks:
       - edge
+      - dbnet
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=eduwit_edge"
       - "traefik.http.routers.eduwit-code-app.rule=Host(`code.eduwitlabs.com.mx`)"
       - "traefik.http.routers.eduwit-code-app.entrypoints=websecure"
       - "traefik.http.routers.eduwit-code-app.tls.certresolver=letsencrypt"
@@ -27,3 +37,6 @@ networks:
   edge:
     external: true
     name: eduwit_edge
+  dbnet:
+    external: true
+    name: ${DB_NETWORK:-eduwit-go_internal}

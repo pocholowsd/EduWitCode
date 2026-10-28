@@ -8,9 +8,23 @@ class Settings(BaseSettings):
 
     arduino_fqbn: str = "arduino:avr:uno"
 
+    # Cuentas y programas guardados: misma base de datos que el editor de bloques
+    # (la tabla usuarios es compartida, así que las cuentas sirven en ambos).
+    db_host: str = "localhost"
+    db_port: int = 3306
+    db_user: str = ""
+    db_password: str = ""
+    db_name: str = "eduwit_go"
+
+    jwt_secret: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def db_configured(self) -> bool:
+        return bool(self.db_user)
 
 
 settings = Settings()

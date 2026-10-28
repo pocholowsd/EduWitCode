@@ -1,0 +1,99 @@
+/*
+ * Tailwind solo para el menú de cuenta y sus ventanas (copiados del editor de bloques).
+ * Sin preflight y escaneando solo esta carpeta, para no alterar los estilos del editor.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./";
+
+@theme {
+  --color-brand-teal: #17c3a2;
+  --color-brand-teal-dark: #0e9a86;
+  --color-status-green: #2ecc71;
+  --color-status-red: #e5484d;
+
+  --animate-pop-in: pop-in 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-fade-in: fade-in 0.15s ease-out;
+
+  /* La raíz de esta app usa font-size 18px: tamaños en px para que se vean igual que en bloques (16px). */
+  --spacing: 4px;
+  --text-sm: 14px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.85) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Lo esencial del preflight de Tailwind, limitado a .edu-ui. */
+@layer base {
+  .edu-ui {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: normal;
+    user-select: none;
+  }
+
+  .edu-ui,
+  .edu-ui *,
+  .edu-ui ::before,
+  .edu-ui ::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+
+  .edu-ui h1, .edu-ui h2, .edu-ui h3, .edu-ui h4 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .edu-ui button,
+  .edu-ui input,
+  .edu-ui select,
+  .edu-ui textarea {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+
+  .edu-ui input,
+  .edu-ui textarea {
+    user-select: text;
+  }
+
+  .edu-ui input::placeholder {
+    opacity: 1;
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+
+  .edu-ui img,
+  .edu-ui svg {
+    display: block;
+    vertical-align: middle;
+  }
+
+  .edu-ui img {
+    max-width: 100%;
+    height: auto;
+  }
+}
