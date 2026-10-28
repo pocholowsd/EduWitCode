@@ -19,7 +19,7 @@ export default function CuentaHeader({ user, onLogin, onOpenProjects, onOpenProf
         <button
           type="button"
           onClick={onLogin}
-          className="flex h-9 items-center rounded-lg bg-brand-teal-dark px-3 text-[12px] font-bold whitespace-nowrap text-white transition-all duration-150 hover:bg-brand-teal active:scale-95 xl:h-10 xl:px-3.5 xl:text-[14px] xl:hover:scale-105"
+          className="flex h-9 items-center rounded-lg bg-brand-teal-dark px-3 text-[12px] font-bold whitespace-nowrap text-white transition-all duration-150 hover:bg-brand-teal active:scale-95 xl:px-3.5 xl:text-[12.5px] xl:hover:scale-105"
         >
           <span className="xl:hidden">Entrar</span>
           <span className="hidden xl:inline">Iniciar sesión</span>

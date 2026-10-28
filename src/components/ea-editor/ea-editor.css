@@ -1,61 +1,82 @@
-.ea-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+/* Barra superior: misma disposición, medidas y colores que el encabezado de EduBlocks Studio */
+.ea-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; font-family: ui-sans-serif, system-ui, sans-serif; letter-spacing: normal; }
 .ea-toolbar button, .ea-toolbar .tb-btn { margin: 0; cursor: pointer; font-family: inherit; box-sizing: border-box; transition: all 0.15s ease; }
-
-/* Botones de icono compactos (36px), igual que el editor de bloques */
+.ea-toolbar .bi { font-size: 15px; line-height: 1; }
 .ea-toolbar .tb-label { display: none; }
+.ea-toolbar .tb-group { display: flex; align-items: center; gap: 6px; }
+
+/* Botones de icono compactos (36px) en pantallas chicas */
 .ea-toolbar .tb-btn,
 .ea-toolbar .tb-settings-toggle { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid #dde1e8; border-radius: 8px; background-color: #fff; color: #4a4f59; user-select: none; }
 .ea-toolbar .tb-btn:active, .ea-toolbar .tb-settings-toggle:active { transform: scale(0.95); }
-
-.ea-toolbar .tb-connect { order: 1; background-color: #fffbeb; border-color: #fde68a; color: #b45309; }
-.ea-toolbar .tb-connect:hover { background-color: #fef3c7; }
-.ea-toolbar .tb-connect .tb-status { position: absolute; top: -3px; right: -3px; display: inline-flex; }
-.ea-toolbar .tb-connect .tb-status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; background-color: #ef4444; }
-.ea-toolbar .tb-connect.is-connected { background-color: #ecfdf5; border-color: #a7f3d0; color: #047857; }
-.ea-toolbar .tb-connect.is-connected:hover { background-color: #d1fae5; }
-.ea-toolbar .tb-connect.is-connected .tb-status-dot { background-color: #10b981; }
-
-.ea-toolbar .tb-play { order: 2; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; background-color: var(--steam-science); color: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
-.ea-toolbar .tb-play:hover { background-color: #12a37f; transform: scale(1.1); }
-.ea-toolbar .tb-play:active { transform: scale(0.95); }
-.ea-toolbar .tb-play:disabled { background-color: #d5d9e0; color: #fff; cursor: not-allowed; box-shadow: none; transform: none; }
-.ea-toolbar .tb-play.is-uploading svg { animation: tb-pulse 1s ease-in-out infinite; }
-@keyframes tb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-.ea-toolbar .tb-open { order: 3; background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
-.ea-toolbar .tb-open:hover { background-color: #ccfbf1; }
-.ea-toolbar .tb-link { order: 3; background-color: #f0f9ff; border-color: #bae6fd; color: #075985; }
-.ea-toolbar .tb-link:hover { background-color: #e0f2fe; }
 .ea-toolbar .tb-btn:disabled { opacity: 0.6; cursor: default; }
 
-/* Placa y baudios dentro de un menú desplegable */
-.ea-toolbar .tb-settings { order: 4; position: relative; display: flex; flex: 0 0 auto; align-items: center; }
-.ea-toolbar .tb-settings-toggle:hover { border-color: var(--steam-science); }
-.ea-toolbar .tb-settings.is-open .tb-settings-toggle { background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
-.ea-toolbar .tb-settings-panel { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; flex-direction: column; align-items: stretch; gap: 12px; width: min(260px, calc(100vw - 24px)); padding: 14px; background-color: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 28px rgba(15,23,42,0.16); box-sizing: border-box; }
-.ea-toolbar .tb-settings.is-open .tb-settings-panel { display: flex; }
-.ea-toolbar .tb-field { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-.ea-toolbar .tb-field label { display: block; font-size: 13px; font-weight: 500; color: #374151; }
-.ea-toolbar .tb-field select { appearance: none; -webkit-appearance: none; width: 100%; height: 40px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0 40px 0 14px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; outline: none; }
-.ea-toolbar .tb-field select:focus { border-color: #93c5fd; }
+.ea-toolbar .tb-connect { order: 1; background-color: #fffbeb; border-color: #fde68a; color: #92400e; }
+.ea-toolbar .tb-connect:hover { background-color: #fef3c7; }
+.ea-toolbar .tb-connect .bi { font-size: 13px; }
+.ea-toolbar .tb-connect .tb-status { position: absolute; top: 4px; right: 4px; display: inline-flex; }
+.ea-toolbar .tb-connect .tb-status-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; background-color: #e5484d; }
+.ea-toolbar .tb-connect.is-connected { background-color: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.ea-toolbar .tb-connect.is-connected:hover { background-color: #d1fae5; }
+.ea-toolbar .tb-connect.is-connected .tb-status-dot { background-color: #2ecc71; }
 
-/* Pantalla completa: selects y botones con texto, igual que el editor de bloques */
+.ea-toolbar .tb-play { order: 2; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; background-color: #fb923c; color: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
+.ea-toolbar .tb-play:hover { background-color: #fdba74; transform: scale(1.1); }
+.ea-toolbar .tb-play:active { transform: scale(0.9); }
+.ea-toolbar .tb-play:disabled { background-color: #d5d9e0; color: #fff; cursor: not-allowed; box-shadow: none; transform: none; }
+.ea-toolbar .tb-play.is-uploading .bi { animation: tb-pulse 1s ease-in-out infinite; }
+@keyframes tb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.ea-toolbar .tb-new { background-color: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.ea-toolbar .tb-new:hover { background-color: #d1fae5; }
+.ea-toolbar .tb-abrir { background-color: #f0f9ff; border-color: #bae6fd; color: #075985; }
+.ea-toolbar .tb-abrir:hover { background-color: #e0f2fe; }
+.ea-toolbar .tb-save { background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
+.ea-toolbar .tb-save:hover { background-color: #ccfbf1; }
+
+/* En pantallas chicas: Nuevo, Abrir, Cargar y Descargar van dentro del panel de ajustes */
+.ea-toolbar .tb-group-proyecto, .ea-toolbar .tb-solo-escritorio { display: none; }
+.ea-toolbar .tb-group-guardar { order: 3; }
+
+/* Placa, proyecto y baudios dentro de un menú desplegable */
+.ea-toolbar .tb-settings { order: 4; position: relative; display: flex; flex: 0 0 auto; align-items: center; }
+.ea-toolbar .tb-settings-toggle:hover { border-color: #17c3a2; }
+.ea-toolbar .tb-settings.is-open .tb-settings-toggle { background-color: #f0fdfa; border-color: #99f6e4; color: #115e59; }
+.ea-toolbar .tb-settings-panel { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; flex-direction: column; align-items: stretch; gap: 14px; width: min(280px, calc(100vw - 24px)); padding: 16px; background-color: #fff; border: 1px solid #e4e7ec; border-radius: 12px; box-shadow: 0 12px 28px rgba(15,23,42,0.16); box-sizing: border-box; }
+.ea-toolbar .tb-settings.is-open .tb-settings-panel { display: flex; }
+.ea-toolbar .tb-panel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ea-toolbar .tb-panel-title { grid-column: 1 / -1; font-size: 11.5px; font-weight: 600; color: #6b7180; }
+.ea-toolbar .tb-panel-actions .tb-btn { width: auto; gap: 4px; padding: 0 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.ea-toolbar .tb-field { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.ea-toolbar .tb-field label { display: block; font-size: 11.5px; font-weight: 600; color: #6b7180; }
+.ea-toolbar .tb-field select { appearance: none; -webkit-appearance: none; width: 100%; height: 36px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a6acb8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; color: #2c313a; border: 1px solid #dde1e8; border-radius: 8px; padding: 0 32px 0 12px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; outline: none; transition: border-color 0.15s ease; }
+.ea-toolbar .tb-field select:hover, .ea-toolbar .tb-field select:focus { border-color: #17c3a2; }
+
+/* Pantalla completa: Placa · Baudios · Conectar · Subir · [Nuevo Abrir] · [Guardar Enlace], como en bloques */
 @media (min-width: 1280px) {
-    .ea-toolbar { gap: 8px; }
+    .ea-toolbar { gap: 16px; }
     .ea-toolbar .tb-label { display: inline; }
-    .ea-toolbar .tb-btn { width: auto; height: 40px; gap: 8px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
-    .ea-toolbar .tb-play { width: 40px; height: 40px; }
+    .ea-toolbar .tb-btn { width: auto; height: 36px; gap: 4px; padding: 0 12px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+    .ea-toolbar .tb-btn.tb-icon { width: 36px; padding: 0; }
+    .ea-toolbar .tb-new:hover, .ea-toolbar .tb-abrir:hover { transform: scale(1.05); }
+    .ea-toolbar .tb-new:active, .ea-toolbar .tb-abrir:active { transform: scale(0.95); }
+
+    .ea-toolbar .tb-group-proyecto { display: flex; order: 3; }
+    .ea-toolbar .tb-solo-escritorio { display: inline-flex; }
+    .ea-toolbar .tb-group-guardar { order: 4; }
 
     .ea-toolbar .tb-settings { order: 0; }
     .ea-toolbar .tb-settings-toggle { display: none; }
-    .ea-toolbar .tb-settings-panel { display: flex; position: static; flex-direction: row; align-items: center; gap: 14px; width: auto; padding: 0 4px 0 0; background: none; border: none; box-shadow: none; }
+    .ea-toolbar .tb-panel-actions { display: none; }
+    .ea-toolbar .tb-settings-panel { display: flex; position: static; flex-direction: row; align-items: center; gap: 16px; width: auto; padding: 0; background: none; border: none; box-shadow: none; }
     .ea-toolbar .tb-field { flex-direction: row; align-items: center; gap: 10px; }
-    .ea-toolbar .tb-field label { font-size: 14px; }
-    .ea-toolbar .tb-field select { width: auto; min-width: 200px; height: 40px; border-radius: 8px; font-size: 14px; }
+    .ea-toolbar .tb-field label { font-size: 12.5px; color: #4a4f59; }
+    .ea-toolbar .tb-field select { width: auto; min-width: 200px; }
     .ea-toolbar .tb-field-baud select { min-width: 100px; }
 
-    .ea-toolbar .tb-connect .tb-status { position: static; align-items: center; gap: 6px; margin-left: 2px; font-size: 12px; font-weight: 500; color: #dc2626; }
-    .ea-toolbar .tb-connect .tb-status-dot { width: 7px; height: 7px; border: none; }
+    .ea-toolbar .tb-connect { gap: 6px; }
+    .ea-toolbar .tb-connect .tb-status { position: static; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: rgba(180, 83, 9, 0.8); }
+    .ea-toolbar .tb-connect .tb-status-dot { width: 6px; height: 6px; box-shadow: none; }
     .ea-toolbar .tb-connect.is-connected .tb-status { color: #059669; }
 }
 

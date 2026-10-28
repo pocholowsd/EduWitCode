@@ -40,16 +40,6 @@ function EditorIcon() {
     );
 }
 
-function SlidersIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-            <circle cx="16" cy="7" r="2" />
-            <circle cx="10" cy="17" r="2" />
-        </svg>
-    );
-}
-
 function CopyIcon() {
     return (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -63,59 +53,6 @@ function CaretIcon({ open }) {
     return (
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {open ? <path d="M6 9l6 6 6-6" /> : <path d="M9 6l6 6-6 6" />}
-        </svg>
-    );
-}
-
-function UsbIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2v15M12 2l-2.5 3M12 2l2.5 3M12 12l-5-3V7M12 14l5-3V8" />
-            <rect x="15.5" y="6" width="3" height="2.5" rx="0.5" />
-            <circle cx="7" cy="6.5" r="1.2" />
-            <circle cx="12" cy="19.5" r="2.5" />
-        </svg>
-    );
-}
-
-function PlayIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
-        </svg>
-    );
-}
-
-function FolderIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        </svg>
-    );
-}
-
-function SaveIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
-        </svg>
-    );
-}
-
-function CloudIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1 0 9.5" />
-            <path d="M12 12v8M9 15l3-3 3 3" />
-        </svg>
-    );
-}
-
-function LinkIcon() {
-    return (
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
-            <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
         </svg>
     );
 }
@@ -197,9 +134,10 @@ export default function EaEditor() {
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [projectsModalOpen, setProjectsModalOpen] = useState(false);
+    const [projectsInitialTab, setProjectsInitialTab] = useState('usuario');
     const [enlaceOpen, setEnlaceOpen] = useState(false);
     const [unsavedPromptOpen, setUnsavedPromptOpen] = useState(false);
-    // Acción que espera al aviso de guardar: 'logout' | 'switch' | { type: 'open', id, source }.
+    // Acción que espera al aviso de guardar: 'new' | 'logout' | 'switch' | { type: 'open', id, source }.
     const [pendingAction, setPendingAction] = useState(null);
     const [showMonitor, setShowMonitor] = useState(false);
     const [showCmdBar, setShowCmdBar] = useState(false);
@@ -430,12 +368,13 @@ export default function EaEditor() {
     };
 
     const runAction = (action) => {
+        if (action === 'new') cambiarPlaca(selectedBoard);
         if (action === 'logout') logout();
         if (action === 'switch') { logout(); setLoginModalOpen(true); }
         if (action?.type === 'open') abrirProyecto(action.id, action.source);
     };
 
-    // Antes de Cerrar sesión, Cambiar de cuenta o abrir otro programa, ofrecer guardar lo que se perdería.
+    // Antes de Nuevo, Cerrar sesión, Cambiar de cuenta o abrir otro programa, ofrecer guardar lo que se perdería.
     const requestAction = (action) => {
         if (hayCambiosSinGuardar()) {
             setPendingAction(action);
@@ -456,6 +395,11 @@ export default function EaEditor() {
         setUnsavedPromptOpen(false);
         setPendingAction(null);
         runAction(pendingAction);
+    };
+
+    const abrirExplorador = (tab) => {
+        setProjectsInitialTab(tab ?? (user ? 'usuario' : 'publico'));
+        setProjectsModalOpen(true);
     };
 
     // source 'codigo': id es el código de referencia. Con sesión, la dueña recibe el original y los demás
@@ -855,14 +799,36 @@ export default function EaEditor() {
         }
     };
 
+    // Nuevo, Abrir, Cargar y Descargar: en pantalla completa van en la barra; en pantallas chicas, dentro del panel de ajustes.
+    const accionProyecto = (accion) => {
+        setShowSettings(false);
+        accion();
+    };
+
     const toolbar = (
         <div className="ea-toolbar">
             <div className={`tb-settings ${showSettings ? 'is-open' : ''}`} ref={settingsRef}>
-                <button type="button" className="tb-settings-toggle" title="Placa y baudios" onClick={() => setShowSettings((v) => !v)}>
-                    <SlidersIcon />
+                <button type="button" className="tb-settings-toggle" title="Placa, proyecto y baudios" onClick={() => setShowSettings((v) => !v)}>
+                    <i className="bi bi-sliders" />
                 </button>
 
                 <div className="tb-settings-panel">
+                    <div className="tb-panel-actions">
+                        <span className="tb-panel-title">Proyecto</span>
+                        <button type="button" className="tb-btn tb-abrir" onClick={() => accionProyecto(() => abrirExplorador())}>
+                            <i className="bi bi-folder2-open" /> Abrir
+                        </button>
+                        <button type="button" className="tb-btn tb-new" onClick={() => accionProyecto(() => requestAction('new'))}>
+                            <i className="bi bi-plus-lg" /> Nuevo
+                        </button>
+                        <label htmlFor="fileInput" className="tb-btn tb-abrir" onClick={() => setShowSettings(false)}>
+                            <i className="bi bi-upload" /> Cargar
+                        </label>
+                        <button type="button" className="tb-btn tb-save" onClick={() => accionProyecto(() => abrirGuardar())}>
+                            <i className="bi bi-download" /> Descargar
+                        </button>
+                    </div>
+
                     <div className="tb-field">
                         <label htmlFor="boardSelect">Placa:</label>
                         <select id="boardSelect" value={selectedBoard} onChange={handleBoardChange}>
@@ -891,7 +857,7 @@ export default function EaEditor() {
                 title={isConnected ? "Desconectar (USB)" : "Conectar (USB)"}
                 className={`tb-btn tb-connect ${isConnected ? 'is-connected' : ''}`}
             >
-                <UsbIcon />
+                <i className="bi bi-usb-symbol" />
                 <span className="tb-label">{isConnected ? "Desconectar (USB)" : "Conectar (USB)"}</span>
                 <span className="tb-status">
                     <span className="tb-status-dot" />
@@ -907,31 +873,39 @@ export default function EaEditor() {
                 disabled={!isConnected || isUploading}
                 title={isUploading ? "Subiendo..." : "Subir"}
             >
-                <PlayIcon />
+                <i className="bi bi-play-fill" />
             </button>
 
-            <label htmlFor="fileInput" className="tb-btn tb-open" title="Cargar">
-                <FolderIcon />
-                <span className="tb-label">Cargar</span>
-            </label>
+            <div className="tb-group tb-group-proyecto">
+                <button type="button" className="tb-btn tb-new" title="Programa nuevo" onClick={() => requestAction('new')}>
+                    <i className="bi bi-plus-lg" />
+                    <span className="tb-label">Nuevo</span>
+                </button>
+                <button type="button" className="tb-btn tb-abrir" title="Explorar programas guardados y de ejemplo" onClick={() => abrirExplorador()}>
+                    <i className="bi bi-folder2-open" />
+                    <span className="tb-label">Abrir</span>
+                </button>
+                <label htmlFor="fileInput" className="tb-btn tb-abrir tb-icon" title="Cargar archivo (.py / .ino)">
+                    <i className="bi bi-upload" />
+                </label>
+            </div>
             <input type="file" id="fileInput" accept=".py,.ino" style={{ display: 'none' }} onChange={handleFileUpload} />
 
-            <button type="button" className="tb-btn tb-open" title="Descargar archivo" onClick={() => abrirGuardar()}>
-                <SaveIcon />
-                <span className="tb-label">Descargar</span>
-            </button>
-
-            <button type="button" className="tb-btn tb-open" title="Guardar en tu cuenta" onClick={handleGuardarNube} disabled={saving}>
-                <CloudIcon />
-                <span className="tb-label">{saving ? 'Guardando…' : 'Guardar'}</span>
-            </button>
-
-            {proyecto.codigo && (
-                <button type="button" className="tb-btn tb-link" title="Ver el enlace para compartir" onClick={() => setEnlaceOpen(true)}>
-                    <LinkIcon />
-                    <span className="tb-label">Enlace</span>
+            <div className="tb-group tb-group-guardar">
+                <button type="button" className="tb-btn tb-save" title="Guardar en tu cuenta" onClick={handleGuardarNube} disabled={saving}>
+                    <i className={`bi ${saving ? 'bi-hourglass-split' : 'bi-cloud-arrow-up'}`} />
+                    <span className="tb-label">{saving ? 'Guardando…' : 'Guardar'}</span>
                 </button>
-            )}
+                <button type="button" className="tb-btn tb-save tb-icon tb-solo-escritorio" title="Descargar archivo" onClick={() => abrirGuardar()}>
+                    <i className="bi bi-download" />
+                </button>
+                {proyecto.codigo && (
+                    <button type="button" className="tb-btn tb-abrir" title="Ver el enlace para compartir" onClick={() => setEnlaceOpen(true)}>
+                        <i className="bi bi-link-45deg" />
+                        <span className="tb-label">Enlace</span>
+                    </button>
+                )}
+            </div>
         </div>
     );
 
@@ -941,7 +915,7 @@ export default function EaEditor() {
             <CuentaHeader
                 user={user}
                 onLogin={() => setLoginModalOpen(true)}
-                onOpenProjects={() => setProjectsModalOpen(true)}
+                onOpenProjects={() => abrirExplorador('usuario')}
                 onOpenProfile={() => setProfileModalOpen(true)}
                 onSwitchAccount={() => requestAction('switch')}
                 onLogout={() => requestAction('logout')}
@@ -1146,6 +1120,7 @@ export default function EaEditor() {
                 userId={user?.id}
                 onRequireLogin={() => setLoginModalOpen(true)}
                 onOpenProject={(id, source) => requestAction({ type: 'open', id, source })}
+                initialTab={projectsInitialTab}
             />
             <EnlaceModal open={enlaceOpen} codigo={proyecto.codigo} onClose={() => setEnlaceOpen(false)} />
         </div>
