@@ -14,6 +14,7 @@ import CuentaHeader, { EnlaceModal } from '../cuenta/CuentaHeader';
 import LoginModal from '../cuenta/auth/LoginModal';
 import ProfileModal from '../cuenta/auth/ProfileModal';
 import ProjectsModal from '../cuenta/projects/ProjectsModal';
+import Modal from '../cuenta/Modal';
 import SaveProjectModal from '../cuenta/SaveProjectModal';
 import UnsavedChangesModal from '../cuenta/UnsavedChangesModal';
 import { codigoFromLocation, shareUrl } from '../cuenta/projects/shareLink';
@@ -1055,32 +1056,56 @@ export default function EaEditor() {
                 </div>
             )}
 
-            {guardarDialogo && (
-                <div className="board-modal-backdrop" onClick={() => setGuardarDialogo(null)}>
-                    <form className="board-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} onSubmit={confirmarGuardar}>
-                        <h3>Guardar programa</h3>
-                        <label htmlFor="nombreArchivo" className="board-modal-label">Nombre del archivo</label>
-                        <div className="board-modal-filename">
-                            <input
-                                id="nombreArchivo"
-                                type="text"
-                                autoFocus
-                                value={guardarDialogo.nombre}
-                                onChange={(e) => setGuardarDialogo((d) => ({ ...d, nombre: e.target.value }))}
-                                onFocus={(e) => e.target.select()}
-                                onKeyDown={(e) => { if (e.key === 'Escape') setGuardarDialogo(null); }}
-                            />
-                            <span>{EXTENSION[selectedBoard]}</span>
+            <Modal open={Boolean(guardarDialogo)} onClose={() => setGuardarDialogo(null)} maxWidth={420}>
+                {guardarDialogo && (
+                    <form onSubmit={confirmarGuardar}>
+                        <div className="flex items-center justify-between border-b border-[#eef0f3] px-5 py-4">
+                            <h3 className="text-[15px] font-bold text-[#1c1f28]">{guardarDialogo.placaDespues ? 'Guardar programa' : 'Descargar programa'}</h3>
+                            <button
+                                type="button"
+                                onClick={() => setGuardarDialogo(null)}
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-[#6b7180] transition-colors hover:bg-[#f4f5f7] hover:text-[#2c313a]"
+                            >
+                                <i className="bi bi-x-lg" />
+                            </button>
                         </div>
-                        <div className="board-modal-actions">
-                            <button type="button" className="board-modal-btn" onClick={() => setGuardarDialogo(null)}>Cancelar</button>
-                            <button type="submit" className="board-modal-btn is-primary" disabled={!guardarDialogo.nombre.trim()}>
+
+                        <div className="flex flex-col gap-1.5 px-5 py-4">
+                            <label htmlFor="nombreArchivo" className="text-[12.5px] font-semibold text-[#4a4f59]">Nombre del archivo</label>
+                            <div className="flex items-center rounded-lg border border-[#dde1e8] transition-colors focus-within:border-brand-teal">
+                                <input
+                                    id="nombreArchivo"
+                                    type="text"
+                                    autoFocus
+                                    value={guardarDialogo.nombre}
+                                    onChange={(e) => setGuardarDialogo((d) => ({ ...d, nombre: e.target.value }))}
+                                    onFocus={(e) => e.target.select()}
+                                    className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-[13px] text-[#2c313a] outline-none"
+                                    placeholder="main"
+                                />
+                                <span className="pr-3 text-[13px] text-[#9aa0ad]">{EXTENSION[selectedBoard]}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 border-t border-[#eef0f3] px-5 py-3.5">
+                            <button
+                                type="button"
+                                onClick={() => setGuardarDialogo(null)}
+                                className="rounded-lg border border-[#dde1e8] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#4a4f59] transition-colors hover:bg-[#f4f5f7]"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={!guardarDialogo.nombre.trim()}
+                                className="rounded-lg bg-brand-teal-dark px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-colors hover:bg-brand-teal disabled:cursor-not-allowed disabled:opacity-50"
+                            >
                                 {guardarDialogo.placaDespues ? 'Guardar y crear nuevo' : 'Descargar'}
                             </button>
                         </div>
                     </form>
-                </div>
-            )}
+                )}
+            </Modal>
 
             <SaveProjectModal
                 open={saveModalOpen}
