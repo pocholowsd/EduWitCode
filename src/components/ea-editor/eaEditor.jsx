@@ -834,7 +834,7 @@ export default function EaEditor() {
                         <label htmlFor="boardSelect">Placa:</label>
                         <select id="boardSelect" value={selectedBoard} onChange={handleBoardChange}>
                             <option value="esp32">MicroPython</option>
-                            <option value="arduino">Arduino C</option>
+                            <option value="arduino">Arduino</option>
                         </select>
                     </div>
 
