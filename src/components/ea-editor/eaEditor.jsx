@@ -18,6 +18,7 @@ import Modal from '../cuenta/Modal';
 import SaveProjectModal from '../cuenta/SaveProjectModal';
 import UnsavedChangesModal from '../cuenta/UnsavedChangesModal';
 import { codigoFromLocation, shareUrl } from '../cuenta/projects/shareLink';
+import { importacionDesdeUrl } from './importarDesdeUrl';
 import {
     getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
     getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
@@ -449,6 +450,29 @@ export default function EaEditor() {
         openedFromLink.current = true;
         window.history.replaceState(null, '', '/');
         abrirProyecto(codigo, 'codigo');
+    }, []);
+
+    // Al entrar con #importar=... (código exportado desde el estudio de bloques), se carga como programa
+    // nuevo sin guardar y se limpia la URL.
+    const importadoDesdeUrl = useRef(false);
+    useEffect(() => {
+        if (importadoDesdeUrl.current || !window.location.hash.startsWith('#importar=')) return;
+        importadoDesdeUrl.current = true;
+        const importacion = importacionDesdeUrl();
+        window.history.replaceState(null, '', window.location.pathname);
+        if (!importacion) {
+            logConsole('No se pudo leer el código recibido. Pégalo con Ctrl+V si lo copiaste.', 'error');
+            return;
+        }
+        const { placa, nombre, codigo } = importacion;
+        const cm = cmInstanceRef.current;
+        cm.setOption('mode', MODO_EDITOR[placa]);
+        cm.setValue(codigo);
+        setSelectedBoard(placa);
+        setPlacaPendiente(null);
+        setNombrePrograma(nombreArchivo(nombre) || NOMBRE_DEFAULT[placa]);
+        setProyecto(PROYECTO_NUEVO);
+        logConsole(`Código importado desde el estudio de bloques (${NOMBRE_PLACA[placa]}).`, 'success');
     }, []);
 
     const handleBaudChange = async (e) => {
