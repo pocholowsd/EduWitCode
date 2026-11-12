@@ -9,7 +9,7 @@ import './arduinoMode';
 import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
 import { flashAvrHex, AVR_BOARD_PROFILES } from '../../api/stk500';
-import { MICROPYTHON_BAUD, tieneMicroPython, subirCodigoMicroPython, flashearFirmwareMicroPython } from '../../api/esp32MicroPython';
+import { MICROPYTHON_BAUD, subirSiTieneMicroPython, subirCodigoMicroPython, flashearFirmwareMicroPython } from '../../api/esp32MicroPython';
 import CuentaHeader, { EnlaceModal } from '../cuenta/CuentaHeader';
 import LoginModal from '../cuenta/auth/LoginModal';
 import ProfileModal from '../cuenta/auth/ProfileModal';
@@ -682,16 +682,20 @@ export default function EaEditor() {
 
         onLog('Comprobando si la placa ya tiene MicroPython...');
         await port.open({ baudRate: MICROPYTHON_BAUD });
-        const yaTiene = await tieneMicroPython(port);
-        await port.close();
-
-        if (!yaTiene) {
-            onLog('No se detectó MicroPython. Preparando la placa por primera vez...');
-            const firmwareMap = await (await fetch(`${API_BASE}/api/esp32-firmware`)).json();
-            await flashearFirmwareMicroPython(port, API_BASE, firmwareMap, onLog, onProgress);
-        } else {
-            onProgress(100);
+        let subido;
+        try {
+            subido = await subirSiTieneMicroPython(port, code, onLog);
+        } finally {
+            try { await port.close(); } catch (e) {}
         }
+        if (subido) {
+            onProgress(100);
+            return;
+        }
+
+        onLog('No se detectó MicroPython. Preparando la placa por primera vez...');
+        const firmwareMap = await (await fetch(`${API_BASE}/api/esp32-firmware`)).json();
+        await flashearFirmwareMicroPython(port, API_BASE, firmwareMap, onLog, onProgress);
 
         await port.open({ baudRate: MICROPYTHON_BAUD });
         try {

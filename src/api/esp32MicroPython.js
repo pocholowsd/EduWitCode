@@ -57,6 +57,9 @@ class TextInbox {
             }
             if (this._error) throw this._error;
             if (Date.now() - start > timeoutMs) {
+                if (!this._buffer) {
+                    throw new Error('La placa no respondió. Presiona el botón EN/RST de la placa (o desconéctala y vuelve a conectarla) e inténtalo de nuevo.');
+                }
                 throw new Error(`La placa no respondió lo esperado. Datos recibidos: ${JSON.stringify(this._buffer.slice(-200))}`);
             }
             await new Promise((resolve) => setTimeout(resolve, 20));
@@ -129,15 +132,34 @@ async function exitRawReplAndSoftReset(writer) {
     await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
-export async function tieneMicroPython(port, timeoutMs = 6000) {
+const UPLOAD_TIMEOUT_MS = 8000;
+
+async function escribirMainPy(writer, inbox, codigo, onLog) {
+    onLog('Copiando código como main.py...');
+    const base64 = uint8ArrayToBase64(new TextEncoder().encode(codigo));
+    const snippet = `import ubinascii\nwith open('main.py','wb') as _f:\n _f.write(ubinascii.a2b_base64('${base64}'))\n`;
+    await execRaw(writer, inbox, snippet, UPLOAD_TIMEOUT_MS);
+
+    onLog('Reiniciando la placa para ejecutar el programa...');
+    await exitRawReplAndSoftReset(writer);
+}
+
+// Comprueba si la placa tiene MicroPython y, si lo tiene, sube el código en la misma sesión del puerto.
+// No se cierra el puerto entre ambos pasos: al cerrarlo y reabrirlo cambian DTR/RTS y muchas placas
+// ESP32 se reinician (o entran en modo descarga) y dejan de responder.
+// Devuelve false si la placa no respondió al REPL (no tiene MicroPython).
+export async function subirSiTieneMicroPython(port, codigo, onLog = () => {}, timeoutMs = 6000) {
     const writer = port.writable.getWriter();
     const inbox = new TextInbox(port.readable);
     try {
-        await enterRawRepl(writer, inbox, timeoutMs);
-        await writer.write(new TextEncoder().encode(`\r${CTRL_B}`));
+        onLog('Conectando al REPL de MicroPython...');
+        try {
+            await enterRawRepl(writer, inbox, timeoutMs);
+        } catch (error) {
+            return false;
+        }
+        await escribirMainPy(writer, inbox, codigo, onLog);
         return true;
-    } catch (error) {
-        return false;
     } finally {
         await inbox.stop();
         try { writer.releaseLock(); } catch (e) {}
@@ -147,18 +169,10 @@ export async function tieneMicroPython(port, timeoutMs = 6000) {
 export async function subirCodigoMicroPython(port, codigo, onLog = () => {}) {
     const writer = port.writable.getWriter();
     const inbox = new TextInbox(port.readable);
-    const timeoutMs = 8000;
     try {
         onLog('Conectando al REPL de MicroPython...');
-        await enterRawRepl(writer, inbox, timeoutMs);
-
-        onLog('Copiando código como main.py...');
-        const base64 = uint8ArrayToBase64(new TextEncoder().encode(codigo));
-        const snippet = `import ubinascii\nwith open('main.py','wb') as _f:\n _f.write(ubinascii.a2b_base64('${base64}'))\n`;
-        await execRaw(writer, inbox, snippet, timeoutMs);
-
-        onLog('Reiniciando la placa para ejecutar el programa...');
-        await exitRawReplAndSoftReset(writer);
+        await enterRawRepl(writer, inbox, UPLOAD_TIMEOUT_MS);
+        await escribirMainPy(writer, inbox, codigo, onLog);
     } finally {
         await inbox.stop();
         try { writer.releaseLock(); } catch (e) {}
