@@ -959,10 +959,6 @@ export default function EaEditor() {
                     <i className="bi bi-folder2-open" />
                     <span className="tb-label">Abrir</span>
                 </button>
-                <button type="button" className="tb-btn tb-abrir" title="Ejemplos listos para abrir" onClick={() => abrirExplorador('ejemplos')}>
-                    <i className="bi bi-journal-code" />
-                    <span className="tb-label">Ejemplos</span>
-                </button>
                 <label htmlFor="fileInput" className="tb-btn tb-abrir tb-icon" title="Cargar archivo (.py / .ino)">
                     <i className="bi bi-upload" />
                 </label>
