@@ -262,6 +262,3 @@
 .ea-editor-container .is-light .monitor-cmdbar-controls select { color: #4e5b61; border-color: #d0d7da; }
 .ea-editor-container .is-light .monitor-cmdbar-controls select option { background-color: #ffffff; }
 .ea-editor-container .is-light .monitor-cmdbar-controls input { background-color: #f6f8f8; color: #4e5b61; border-color: #d0d7da; }
-
-/* Posición del cursor en la barra de estado (como "Ln 12, Col 5" en Arduino IDE) */
-.ea-editor-container .ide-cursor { flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
