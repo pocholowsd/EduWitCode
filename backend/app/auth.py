@@ -3,10 +3,10 @@ from typing import Optional
 
 import bcrypt
 import jwt
-from fastapi import Header
+from fastapi import Depends, Header
 
 from app.config import settings
-from app.db import ApiError
+from app.db import ApiError, get_db, query
 
 TOKEN_TTL = timedelta(days=30)
 
@@ -53,6 +53,14 @@ def require_auth(authorization: Optional[str] = Header(None)) -> int:
         return jwt.decode(token, _secret(), algorithms=["HS256"])["id"]
     except (jwt.PyJWTError, KeyError):
         raise ApiError(401, "Sesión inválida o expirada.")
+
+
+# Como require_auth, pero además la cuenta debe tener rol de administrador.
+def require_admin(user_id: int = Depends(require_auth), db=Depends(get_db)) -> int:
+    rows = query(db, "SELECT rol FROM usuarios WHERE id = %s", (user_id,))
+    if not rows or rows[0].get("rol") != "admin":
+        raise ApiError(403, "Solo un administrador puede hacer esto.")
+    return user_id
 
 
 # Como require_auth, pero sin token (o con uno inválido) sigue como anónimo.

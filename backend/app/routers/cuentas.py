@@ -34,7 +34,7 @@ class UpdateMeIn(BaseModel):
 
 
 def to_public_user(row: dict) -> dict:
-    return {"id": row["id"], "nombre": row["nombre"], "alias": row["alias"], "email": row["email"], "avatarUrl": row["avatar_url"]}
+    return {"id": row["id"], "nombre": row["nombre"], "alias": row["alias"], "email": row["email"], "avatarUrl": row["avatar_url"], "rol": row.get("rol") or "usuario"}
 
 
 # La comparación no distingue mayúsculas (la columna usa una intercalación *_ci).

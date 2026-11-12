@@ -6,48 +6,78 @@ import {
   listProyectosUsuario,
   deleteProyectoUsuario,
   getProyectoPorCodigo,
+  listEjemplos,
+  updateEjemplo,
+  deleteEjemplo,
 } from '../authApi';
 import AccessModal, { ACCESS_OPTIONS } from './AccessModal';
+import ExampleFormModal from './ExampleFormModal';
 import { extractCodigo } from './shareLink';
 
 const TABS = [
   { key: 'usuario', label: 'Mis programas', auth: true, fetch: listProyectosUsuario, empty: 'Tu lista de programas está vacía.' },
-  { key: 'biblioteca', label: 'Biblioteca', auth: true, fetch: listBiblioteca, empty: 'Aquí aparecerán tus copias de los programas que abras con un código o enlace.' },
-  { key: 'publico', label: 'Programas de ejemplo', auth: false, fetch: listProyectosPublicos, empty: 'Aún no hay programas públicos.' },
+  { key: 'biblioteca', label: 'Mi biblioteca', auth: true, fetch: listBiblioteca, empty: 'Aquí aparecerán tus copias de los programas compartidos y ejemplos que abras.' },
+  { key: 'publico', label: 'Programas públicos', icon: 'bi-globe2', auth: false, fetch: listProyectosPublicos, empty: 'Aún no hay programas públicos.' },
+  { key: 'ejemplos', label: 'Ejemplos', auth: false, fetch: listEjemplos, empty: 'Aún no hay ejemplos.' },
 ];
+
+// Placas del editor de código: el valor es el que se guarda con cada programa (columna board).
+export const PLACAS = [
+  { value: 'MicroPython', label: 'MicroPython (ESP32)' },
+  { value: 'Arduino C', label: 'Arduino C (Arduino Uno)' },
+];
+
+const ALL_BOARDS = 'all';
+
+const boardLabel = (value) => PLACAS.find((p) => p.value === value)?.label ?? value;
 
 function formatDate(value) {
   if (!value) return '';
   return new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function ProjectCard({ title, board, autor, updatedAt, selected, onClick, onDelete, access, onEditAccess }) {
+const ORIGIN_BADGES = {
+  compartido: { label: 'Compartido', icon: 'bi-link-45deg', tone: 'bg-sky-50 text-sky-700' },
+  publico: { label: 'Público', icon: 'bi-globe2', tone: 'bg-emerald-50 text-emerald-700' },
+  ejemplo: { label: 'Ejemplo', icon: 'bi-journal-code', tone: 'bg-violet-50 text-violet-700' },
+};
+
+function ProjectCard({ title, board, autor, updatedAt, description, origin, selected, onClick, onDoubleClick, onDelete, access, onEditAccess, onReplace }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={`group relative flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all ${
         selected ? 'border-brand-teal bg-[#effaf7] shadow-sm' : 'border-[#e4e7ec] bg-white hover:border-[#c9ced9] hover:shadow-sm'
       }`}
     >
-      <div className={`w-full min-w-0 ${access ? 'pr-16' : onDelete ? 'pr-7' : ''}`}>
+      <div className={`w-full min-w-0 ${access || onReplace ? 'pr-16' : onDelete ? 'pr-7' : ''}`}>
         <p className="truncate text-[13px] font-semibold text-[#1c1f28]">{title}</p>
-        <p className="truncate text-[11px] text-[#8a90a0]">{board}</p>
+        {board && <p className="truncate text-[11px] text-[#8a90a0]">{boardLabel(board)}</p>}
       </div>
-      <div className="flex w-full min-w-0 flex-col gap-0.5 text-[11px] text-[#6b7180]">
-        {autor && (
-          <span className="flex min-w-0 items-center gap-1" title="Autor">
-            <i className="bi bi-person text-[#a6acb8]" />
-            <span className="truncate">{autor}</span>
-          </span>
-        )}
-        {updatedAt && (
-          <span className="flex min-w-0 items-center gap-1" title="Última modificación">
-            <i className="bi bi-clock-history text-[#a6acb8]" />
-            <span className="truncate">{formatDate(updatedAt)}</span>
-          </span>
-        )}
-      </div>
+      {description && <p className="line-clamp-2 text-[11.5px] leading-snug text-[#6b7180]">{description}</p>}
+      {ORIGIN_BADGES[origin] && (
+        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${ORIGIN_BADGES[origin].tone}`} title="De dónde viene esta copia">
+          <i className={`bi ${ORIGIN_BADGES[origin].icon}`} /> Copia de {ORIGIN_BADGES[origin].label.toLowerCase()}
+        </span>
+      )}
+      {(autor || updatedAt) && (
+        <div className="flex w-full min-w-0 flex-col gap-0.5 text-[11px] text-[#6b7180]">
+          {autor && (
+            <span className="flex min-w-0 items-center gap-1" title="Autor">
+              <i className="bi bi-person text-[#a6acb8]" />
+              <span className="truncate">{autor}</span>
+            </span>
+          )}
+          {updatedAt && (
+            <span className="flex min-w-0 items-center gap-1" title="Última modificación">
+              <i className="bi bi-clock-history text-[#a6acb8]" />
+              <span className="truncate">{formatDate(updatedAt)}</span>
+            </span>
+          )}
+        </div>
+      )}
       {access && (
         <span
           role="button"
@@ -59,12 +89,23 @@ function ProjectCard({ title, board, autor, updatedAt, selected, onClick, onDele
           <i className={`bi ${ACCESS_OPTIONS[access].icon}`} />
         </span>
       )}
+      {onReplace && (
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => { e.stopPropagation(); onReplace(); }}
+          className="absolute top-2 right-9 flex h-6 w-6 items-center justify-center rounded-full text-[11px] text-[#b0b5c0] opacity-0 transition-all group-hover:opacity-100 hover:bg-amber-50 hover:text-amber-600 pointer-coarse:opacity-100"
+          title="Reemplazar con el programa abierto"
+        >
+          <i className="bi bi-arrow-repeat" />
+        </span>
+      )}
       {onDelete && (
         <span
           role="button"
           tabIndex={-1}
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-[11px] text-[#b0b5c0] opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-[11px] text-[#b0b5c0] opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 pointer-coarse:opacity-100"
           title="Eliminar"
         >
           <i className="bi bi-trash" />
@@ -74,7 +115,17 @@ function ProjectCard({ title, board, autor, updatedAt, selected, onClick, onDele
   );
 }
 
-export default function ProjectsModal({ open, onClose, isAuthenticated, userId, onRequireLogin, onOpenProject, initialTab = 'usuario' }) {
+// getCurrentProgram: () => { nombre, board, contenido } del programa abierto (para reemplazar un ejemplo).
+export default function ProjectsModal({
+  open, onClose, isAuthenticated, userId, onRequireLogin, onOpenProject, initialTab = 'usuario',
+  currentBoard, isAdmin = false, getCurrentProgram,
+}) {
+  const [boardFilter, setBoardFilter] = useState(ALL_BOARDS);
+  // Formulario de ejemplo (solo admin): { initial: ejemplo a reemplazar }.
+  const [exampleForm, setExampleForm] = useState(null);
+  const [exampleSaving, setExampleSaving] = useState(false);
+  const [exampleError, setExampleError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [tab, setTab] = useState(initialTab);
   const [search, setSearch] = useState('');
   const [items, setItems] = useState([]);
@@ -89,8 +140,15 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
   const showingCode = Boolean(codeLookup && !codeLookup.notFound);
   const needsLogin = currentTab.auth && !isAuthenticated && !showingCode;
 
+  // En Ejemplos se muestra primero lo de la placa elegida, como en Arduino IDE.
+  const filtroInicial = (t) => (t === 'ejemplos' && currentBoard ? currentBoard : ALL_BOARDS);
+
   useEffect(() => {
-    if (open) { setTab(initialTab); setSearch(''); setSelectedId(null); }
+    if (!open) return;
+    setTab(initialTab);
+    setSearch('');
+    setSelectedId(null);
+    setBoardFilter(filtroInicial(initialTab));
   }, [open, initialTab]);
 
   useEffect(() => {
@@ -105,7 +163,7 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
       .catch((err) => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, tab, isAuthenticated, userId]);
+  }, [open, tab, isAuthenticated, userId, reloadKey]);
 
   useEffect(() => {
     if (!codigo) { setCodeLookup(null); return undefined; }
@@ -120,8 +178,34 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
 
   const filtered = useMemo(() => {
     if (showingCode) return codeLookup.proyecto ? [codeLookup.proyecto] : [];
-    return items.filter((p) => p.nombre.toLowerCase().includes(search.toLowerCase()));
-  }, [items, search, showingCode, codeLookup]);
+    const query = search.toLowerCase();
+    return items.filter((p) => (boardFilter === ALL_BOARDS || p.board === boardFilter)
+      && (p.nombre.toLowerCase().includes(query) || (p.categoria || '').toLowerCase().includes(query)));
+  }, [items, search, showingCode, codeLookup, boardFilter]);
+
+  // Ejemplos agrupados por categoría, en orden alfabético.
+  const exampleGroups = useMemo(() => {
+    if (tab !== 'ejemplos' || showingCode) return [];
+    const groups = new Map();
+    filtered.forEach((p) => {
+      const key = p.categoria || 'General';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, 'es', { numeric: true }));
+  }, [filtered, tab, showingCode]);
+
+  const exampleCategories = useMemo(
+    () => (tab === 'ejemplos' ? [...new Set(items.map((p) => p.categoria).filter(Boolean))].sort() : []),
+    [items, tab],
+  );
+
+  // Placas del editor más cualquier otra que tenga algo en esta pestaña.
+  const boardOptions = useMemo(() => {
+    const values = new Set(PLACAS.map((p) => p.value));
+    items.forEach((p) => p.board && values.add(p.board));
+    return [...values];
+  }, [items]);
 
   const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
@@ -147,14 +231,42 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
     }
   };
 
+  const handleSaveExample = async (fields) => {
+    const program = getCurrentProgram?.();
+    if (!program) return;
+    setExampleSaving(true);
+    setExampleError('');
+    try {
+      await updateEjemplo(exampleForm.initial.id, { ...fields, board: program.board, contenido: program.contenido });
+      setExampleForm(null);
+      setBoardFilter(program.board);
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setExampleError(err.message);
+    } finally {
+      setExampleSaving(false);
+    }
+  };
+
+  const handleDeleteExample = async (example) => {
+    if (!window.confirm(`¿Eliminar el ejemplo "${example.nombre}"? Nadie podrá abrirlo de nuevo.`)) return;
+    try {
+      await deleteEjemplo(example.id);
+      setItems((prev) => prev.filter((p) => p.id !== example.id));
+      if (selectedId === example.id) setSelectedId(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleAccessSaved = (id, acceso, codigoProyecto) => {
     setItems((prev) => prev.map((p) => (p.id === id ? { ...p, acceso, codigo: codigoProyecto } : p)));
   };
 
-  const handleAccept = () => {
-    if (!selected) return;
-    if (showingCode) onOpenProject(selected.codigo, 'codigo');
-    else onOpenProject(selected.id, tab === 'publico' ? 'publico' : 'usuario');
+  const abrir = (p) => {
+    if (!p) return;
+    if (showingCode) onOpenProject(p.codigo, 'codigo');
+    else onOpenProject(p.id, tab === 'publico' ? 'publico' : tab === 'ejemplos' ? 'ejemplo' : 'usuario');
     onClose();
   };
 
@@ -169,12 +281,14 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
               <button
                 key={t.key}
                 type="button"
-                onClick={() => { setTab(t.key); setSelectedId(null); }}
+                onClick={() => { setTab(t.key); setSelectedId(null); setBoardFilter(filtroInicial(t.key)); }}
+                title={t.label}
+                aria-label={t.label}
                 className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold whitespace-nowrap transition-colors ${
                   tab === t.key ? 'bg-white text-[#1c1f28] shadow-sm' : 'text-[#6b7180]'
                 }`}
               >
-                {t.label}
+                {t.icon ? <i className={`bi ${t.icon} text-[14px]`} /> : t.label}
               </button>
             ))}
           </div>
@@ -197,6 +311,23 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
           </button>
         </div>
 
+        {!showingCode && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#eef0f3] px-4 py-2.5 sm:px-5">
+            <label className="flex min-w-0 items-center gap-2 text-[12.5px] font-semibold text-[#4a4f59]">
+              <i className="bi bi-cpu text-[#8a90a0]" />
+              <span className="shrink-0">Placa:</span>
+              <select
+                value={boardFilter}
+                onChange={(e) => { setBoardFilter(e.target.value); setSelectedId(null); }}
+                className="min-w-0 cursor-pointer rounded-lg border border-[#dde1e8] bg-white px-2 py-1.5 text-[12.5px] font-semibold text-[#2c313a] outline-none transition-colors focus:border-brand-teal"
+              >
+                <option value={ALL_BOARDS}>Todas las placas</option>
+                {boardOptions.map((value) => <option key={value} value={value}>{boardLabel(value)}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-4 sm:p-5">
           {needsLogin ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -218,8 +349,41 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
               <i className="bi bi-inbox text-3xl text-[#c9ced9]" />
               <p className="text-[13px] text-[#8a90a0]">
-                {currentTab.empty}
+                {boardFilter !== ALL_BOARDS && items.length > 0
+                  ? `No hay ${tab === 'ejemplos' ? 'ejemplos' : 'programas'} para ${boardLabel(boardFilter)}.`
+                  : currentTab.empty}
               </p>
+              {boardFilter !== ALL_BOARDS && items.length > 0 && (
+                <button type="button" className="text-[12.5px] font-bold text-brand-teal-dark hover:underline" onClick={() => setBoardFilter(ALL_BOARDS)}>
+                  Ver todas las placas
+                </button>
+              )}
+            </div>
+          ) : exampleGroups.length > 0 ? (
+            <div className="flex flex-col gap-5">
+              {exampleGroups.map(([categoria, list]) => (
+                <section key={categoria}>
+                  <h4 className="mb-2 flex items-center gap-2 text-[12px] font-bold tracking-wide text-[#6b7180] uppercase">
+                    <i className="bi bi-folder2 text-[#a6acb8]" /> {categoria}
+                    <span className="font-semibold text-[#a6acb8] normal-case">{list.length}</span>
+                  </h4>
+                  <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
+                    {list.map((p) => (
+                      <ProjectCard
+                        key={p.id}
+                        title={p.nombre}
+                        board={boardFilter === ALL_BOARDS ? p.board : null}
+                        description={p.descripcion}
+                        selected={selectedId === p.id}
+                        onClick={() => setSelectedId(p.id)}
+                        onDoubleClick={() => abrir(p)}
+                        onDelete={isAdmin ? () => handleDeleteExample(p) : null}
+                        onReplace={isAdmin ? () => { setExampleError(''); setExampleForm({ initial: p }); } : null}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -235,8 +399,10 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
                   board={p.board}
                   autor={p.autor}
                   updatedAt={p.updatedAt}
+                  origin={tab === 'biblioteca' && !showingCode ? p.origen : null}
                   selected={selectedId === p.id}
                   onClick={() => setSelectedId(p.id)}
+                  onDoubleClick={() => abrir(p)}
                   onDelete={ownList ? () => handleDelete(p.id) : tab === 'biblioteca' && !showingCode ? () => handleRemoveFromLibrary(p.id) : null}
                   access={ownList ? (p.acceso || 'privado') : null}
                   onEditAccess={() => setAccessProject(p)}
@@ -258,7 +424,7 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
             type="button"
             disabled={!selected}
             className="rounded-full bg-brand-teal-dark px-4 py-1.5 text-[12.5px] font-bold text-white transition-all hover:bg-brand-teal disabled:cursor-default disabled:opacity-40 disabled:hover:bg-brand-teal-dark"
-            onClick={handleAccept}
+            onClick={() => abrir(selected)}
           >
             Aceptar
           </button>
@@ -266,6 +432,19 @@ export default function ProjectsModal({ open, onClose, isAuthenticated, userId, 
       </div>
 
       <AccessModal project={accessProject} onClose={() => setAccessProject(null)} onSaved={handleAccessSaved} />
+      {isAdmin && (
+        <ExampleFormModal
+          open={Boolean(exampleForm)}
+          board={boardLabel(getCurrentProgram?.()?.board ?? currentBoard)}
+          initial={exampleForm?.initial ?? null}
+          defaultName={getCurrentProgram?.()?.nombre}
+          categories={exampleCategories}
+          saving={exampleSaving}
+          error={exampleError}
+          onClose={() => setExampleForm(null)}
+          onSubmit={handleSaveExample}
+        />
+      )}
     </Modal>
   );
 }

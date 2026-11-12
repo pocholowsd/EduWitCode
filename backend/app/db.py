@@ -4,6 +4,7 @@ import pymysql
 from pymysql.cursors import DictCursor
 
 from app.config import settings
+from app.ejemplos_iniciales import EJEMPLOS_INICIALES
 
 ER_DUP_ENTRY = 1062
 
@@ -91,6 +92,14 @@ def migrate() -> None:
             execute(conn, "ALTER TABLE usuarios MODIFY COLUMN avatar_url MEDIUMTEXT NULL")
         if column("alias") is None:
             execute(conn, "ALTER TABLE usuarios ADD COLUMN alias VARCHAR(30) NULL UNIQUE")
+        # Rol de la cuenta (misma columna que usa bloques): solo los administradores publican ejemplos.
+        if column("rol") is None:
+            execute(conn, "ALTER TABLE usuarios ADD COLUMN rol ENUM('usuario', 'admin') NOT NULL DEFAULT 'usuario'")
+        # ADMIN_EMAILS (separados por coma) vuelve administradores a esas cuentas al arrancar.
+        admin_emails = settings.admin_email_list
+        if admin_emails:
+            marcadores = ", ".join(["%s"] * len(admin_emails))
+            execute(conn, f"UPDATE usuarios SET rol = 'admin' WHERE email IN ({marcadores})", tuple(admin_emails))
 
         # Programas de código (MicroPython / Arduino C). Separados de proyectos_usuario,
         # que guarda los bloques del otro editor.
@@ -113,5 +122,43 @@ def migrate() -> None:
                 REFERENCES proyectos_codigo(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
+
+        # Ejemplos de código (como los de Arduino IDE), agrupados por placa y categoría. Separados de
+        # proyectos_base, que guarda los ejemplos de bloques del otro editor.
+        execute(conn, """
+            CREATE TABLE IF NOT EXISTS ejemplos_codigo (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              nombre VARCHAR(150) NOT NULL,
+              categoria VARCHAR(80) NOT NULL DEFAULT 'General',
+              board VARCHAR(80) NOT NULL,
+              descripcion VARCHAR(300) NULL,
+              contenido LONGTEXT NOT NULL,
+              creado_por INT NULL,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              CONSTRAINT fk_ejemplos_codigo_usuario FOREIGN KEY (creado_por)
+                REFERENCES usuarios(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+
+        # Copias de ejemplos en la Biblioteca: el ejemplo vive en otra tabla, así que necesita su propia referencia.
+        if not query(
+            conn,
+            "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'proyectos_codigo' AND COLUMN_NAME = 'origen_ejemplo_id'",
+        ):
+            execute(conn, """
+                ALTER TABLE proyectos_codigo
+                  ADD COLUMN origen_ejemplo_id INT NULL,
+                  ADD CONSTRAINT fk_proyectos_codigo_origen_ejemplo FOREIGN KEY (origen_ejemplo_id)
+                    REFERENCES ejemplos_codigo(id) ON DELETE SET NULL
+            """)
+
+        if query(conn, "SELECT COUNT(*) AS n FROM ejemplos_codigo")[0]["n"] == 0:
+            for e in EJEMPLOS_INICIALES:
+                execute(
+                    conn,
+                    "INSERT INTO ejemplos_codigo (nombre, categoria, board, descripcion, contenido) VALUES (%s, %s, %s, %s, %s)",
+                    (e["nombre"], e["categoria"], e["board"], e["descripcion"], e["contenido"]),
+                )
     finally:
         conn.close()

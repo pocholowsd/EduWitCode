@@ -64,8 +64,13 @@ export const listProyectosUsuario = () => request('/api/proyectos-usuario', { au
 
 export const getProyectoUsuario = (id) => request(`/api/proyectos-usuario/${id}`, { auth: true });
 
-export const createProyectoUsuario = (nombre, board, contenido, origenCodigo = null) =>
-  request('/api/proyectos-usuario', { method: 'POST', body: { nombre, board, contenido, origenCodigo }, auth: true });
+// origen: { codigo } | { ejemploId } cuando el programa se abrió sin sesión (se guarda como copia en la Biblioteca).
+export const createProyectoUsuario = (nombre, board, contenido, origen = null) =>
+  request('/api/proyectos-usuario', {
+    method: 'POST',
+    body: { nombre, board, contenido, origenCodigo: origen?.codigo ?? null, origenEjemploId: origen?.ejemploId ?? null },
+    auth: true,
+  });
 
 export const updateProyectoUsuario = (id, { nombre, board, contenido }) =>
   request(`/api/proyectos-usuario/${id}`, { method: 'PUT', body: { nombre, board, contenido }, auth: true });
@@ -89,3 +94,19 @@ export const getAccesoProyecto = (id) => request(`/api/proyectos-usuario/${id}/a
 
 export const updateAccesoProyecto = (id, acceso) =>
   request(`/api/proyectos-usuario/${id}/acceso`, { method: 'PUT', body: { acceso }, auth: true });
+
+// Ejemplos: cualquiera los ve; solo un administrador los publica, reemplaza o elimina.
+export const listEjemplos = () => request('/api/ejemplos');
+
+export const getEjemplo = (id) => request(`/api/ejemplos/${id}`);
+
+export const copiarEjemplo = (id) => request(`/api/ejemplos/${id}/copia`, { method: 'POST', auth: true });
+
+export const createEjemplo = (ejemplo) =>
+  request('/api/ejemplos', { method: 'POST', body: ejemplo, auth: true });
+
+export const updateEjemplo = (id, ejemplo) =>
+  request(`/api/ejemplos/${id}`, { method: 'PUT', body: ejemplo, auth: true });
+
+export const deleteEjemplo = (id) =>
+  request(`/api/ejemplos/${id}`, { method: 'DELETE', auth: true });

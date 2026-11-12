@@ -23,6 +23,7 @@ import {
     getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
     getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
     createProyectoUsuario, updateProyectoUsuario, updateAccesoProyecto,
+    getEjemplo, copiarEjemplo, createEjemplo,
 } from '../cuenta/authApi';
 
 function MonitorIcon() {
@@ -112,7 +113,8 @@ function MoonIcon() {
 }
 
 // Programa guardado en la cuenta. remoteId null = aún no está guardado en la nube.
-const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, savedSnapshot: null };
+// origenCodigo / origenEjemploId: abierto sin sesión desde un enlace o un ejemplo (al guardarlo queda como copia).
+const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, origenEjemploId: null, savedSnapshot: null };
 
 const esCodigoInicial = (codigo, placa) => codigo.trim() === CODIGO_VACIO[placa].trim() || codigo === CODIGO_BASE[placa];
 
@@ -316,6 +318,8 @@ export default function EaEditor() {
     const neverSaved = !proyecto.remoteId;
     // Cuentas creadas antes de que el alias fuera obligatorio: deben elegir uno al entrar.
     const aliasMissing = Boolean(user && !user.alias);
+    // Solo las cuentas de administrador pueden publicar, reemplazar o eliminar Ejemplos.
+    const isAdmin = user?.rol === 'admin';
     // Sin guardar en la nube, solo se pregunta si el código no es la plantilla inicial (como al cambiar de placa).
     const hayCambiosSinGuardar = () => (neverSaved
         ? !esCodigoInicial(cmInstanceRef.current.getValue(), selectedBoard)
@@ -328,12 +332,26 @@ export default function EaEditor() {
         setSaveModalOpen(true);
     };
 
-    const handleConfirmSave = async (nombre, access) => {
+    const handleConfirmSave = async (nombre, access, ejemplo = null) => {
         if (saving) return;
         setSaving(true);
         setSaveError('');
         const contenido = cmInstanceRef.current.getValue();
         const board = NOMBRE_PLACA[selectedBoard];
+        // "Ejemplo" (solo admin): se publica una copia en Ejemplos; el programa propio no se modifica.
+        if (ejemplo) {
+            try {
+                await createEjemplo({ ...ejemplo, board, contenido });
+                logConsole(`Ejemplo "${ejemplo.nombre}" publicado en Ejemplos (${board}).`, 'success');
+                setSaveModalOpen(false);
+                setPendingAction(null);
+            } catch (err) {
+                setSaveError(`No se pudo publicar el ejemplo: ${err.message}`);
+            } finally {
+                setSaving(false);
+            }
+            return;
+        }
         const savedSnapshot = snapshotActual();
         let remoteId = proyecto.remoteId;
         try {
@@ -342,7 +360,7 @@ export default function EaEditor() {
                 setProyecto((p) => ({ ...p, nombre, savedSnapshot }));
                 logConsole(`Proyecto "${nombre}" actualizado en la nube.`, 'success');
             } else {
-                const data = await createProyectoUsuario(nombre, board, contenido, proyecto.origenCodigo);
+                const data = await createProyectoUsuario(nombre, board, contenido, { codigo: proyecto.origenCodigo, ejemploId: proyecto.origenEjemploId });
                 remoteId = data.proyecto.id;
                 const esCopia = data.proyecto.esCopia;
                 setProyecto((p) => ({ ...p, nombre, remoteId, esCopia, savedSnapshot }));
@@ -432,6 +450,8 @@ export default function EaEditor() {
                 usuario: getProyectoUsuario,
                 publico: getProyectoPublico,
                 codigo: loggedIn ? copiarProyectoPorCodigo : getProyectoPorCodigo,
+                // Con sesión, un ejemplo se abre como copia en Mi biblioteca (se crea la primera vez).
+                ejemplo: loggedIn ? copiarEjemplo : getEjemplo,
             };
             const data = await loaders[source](id);
             const p = data.proyecto;
@@ -443,14 +463,20 @@ export default function EaEditor() {
             setPlacaPendiente(null);
             setNombrePrograma(nombreArchivo(p.nombre) || NOMBRE_DEFAULT[placa]);
             setProyecto({
-                remoteId: source === 'usuario' || (source === 'codigo' && loggedIn) ? p.id : null,
+                remoteId: source === 'usuario' || ((source === 'codigo' || source === 'ejemplo') && loggedIn) ? p.id : null,
                 nombre: p.nombre,
                 codigo: p.codigo ?? null,
-                esCopia: p.esCopia,
+                esCopia: Boolean(p.esCopia),
                 origenCodigo: source === 'codigo' && !loggedIn ? id : null,
+                origenEjemploId: source === 'ejemplo' && !loggedIn ? id : null,
                 savedSnapshot: `${placa}\n${cm.getValue()}`,
             });
-            logConsole(`Proyecto "${p.nombre}" cargado.`);
+            logConsole(`${source === 'ejemplo' ? 'Ejemplo' : 'Proyecto'} "${p.nombre}" ${source === 'ejemplo' ? 'abierto' : 'cargado'}.`);
+            if (source === 'ejemplo') {
+                if (!loggedIn) logConsole('Inicia sesión y guarda para tener tu copia en la Biblioteca.');
+                else if (data.existente) logConsole('Ya tenías una copia de este ejemplo; se abrió tu copia de la Biblioteca.');
+                else logConsole('Se creó una copia del ejemplo en tu Biblioteca. Los cambios se guardan solo en tu copia.');
+            }
             if (source === 'codigo') {
                 if (!loggedIn) logConsole('Inicia sesión y guarda para tener tu copia en la Biblioteca.');
                 else if (data.existente) logConsole(`Ya tenías una copia de este programa de ${p.autor}; se abrió tu copia de la Biblioteca.`);
@@ -929,9 +955,13 @@ export default function EaEditor() {
                     <i className="bi bi-plus-lg" />
                     <span className="tb-label">Nuevo</span>
                 </button>
-                <button type="button" className="tb-btn tb-abrir" title="Explorar programas guardados y de ejemplo" onClick={() => abrirExplorador()}>
+                <button type="button" className="tb-btn tb-abrir" title="Abrir programas guardados" onClick={() => abrirExplorador()}>
                     <i className="bi bi-folder2-open" />
                     <span className="tb-label">Abrir</span>
+                </button>
+                <button type="button" className="tb-btn tb-abrir" title="Ejemplos listos para abrir" onClick={() => abrirExplorador('ejemplos')}>
+                    <i className="bi bi-journal-code" />
+                    <span className="tb-label">Ejemplos</span>
                 </button>
                 <label htmlFor="fileInput" className="tb-btn tb-abrir tb-icon" title="Cargar archivo (.py / .ino)">
                     <i className="bi bi-upload" />
@@ -1201,7 +1231,9 @@ export default function EaEditor() {
                 open={saveModalOpen}
                 initialName={proyecto.nombre ?? nombrePrograma}
                 remoteId={proyecto.remoteId}
-                showAccess={!proyecto.esCopia && !proyecto.origenCodigo}
+                showAccess={!proyecto.esCopia && !proyecto.origenCodigo && !proyecto.origenEjemploId}
+                isAdmin={isAdmin}
+                board={NOMBRE_PLACA[selectedBoard]}
                 saving={saving}
                 error={saveError}
                 onClose={() => { setSaveModalOpen(false); setPendingAction(null); }}
@@ -1236,6 +1268,13 @@ export default function EaEditor() {
                 onRequireLogin={() => setLoginModalOpen(true)}
                 onOpenProject={(id, source) => requestAction({ type: 'open', id, source })}
                 initialTab={projectsInitialTab}
+                currentBoard={NOMBRE_PLACA[selectedBoard]}
+                isAdmin={isAdmin}
+                getCurrentProgram={() => ({
+                    nombre: proyecto.nombre ?? nombrePrograma,
+                    board: NOMBRE_PLACA[selectedBoard],
+                    contenido: cmInstanceRef.current?.getValue() ?? '',
+                })}
             />
             <EnlaceModal open={enlaceOpen} codigo={proyecto.codigo} onClose={() => setEnlaceOpen(false)} />
         </div>

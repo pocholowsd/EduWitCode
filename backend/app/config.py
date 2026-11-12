@@ -23,6 +23,13 @@ class Settings(BaseSettings):
 
     jwt_secret: str = ""
 
+    # Correos (separados por coma) cuyas cuentas se vuelven administradoras al arrancar.
+    admin_emails: str = ""
+
+    @property
+    def admin_email_list(self) -> list[str]:
+        return [email.strip() for email in self.admin_emails.split(",") if email.strip()]
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

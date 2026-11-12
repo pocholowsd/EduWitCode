@@ -5,7 +5,7 @@ import { shareUrl } from './shareLink';
 
 export const ACCESS_OPTIONS = {
   privado: { label: 'Privado', icon: 'bi-lock-fill', description: 'Solo tú puedes verlo.', tone: 'text-[#6b7180] bg-[#eef0f3]' },
-  publico: { label: 'Público', icon: 'bi-globe2', description: 'Aparece en Programas de ejemplo para todos.', tone: 'text-emerald-700 bg-emerald-50' },
+  publico: { label: 'Público', icon: 'bi-globe2', description: 'Aparece en Programas públicos para todos.', tone: 'text-emerald-700 bg-emerald-50' },
   compartido: { label: 'Compartido', icon: 'bi-link-45deg', description: 'Cualquiera con el enlace obtiene una copia; solo tú editas el original.', tone: 'text-sky-700 bg-sky-50' },
 };
 
@@ -78,8 +78,11 @@ export function ShareLink({ codigo }) {
   );
 }
 
-export function AccessPicker({ state, disabled = false }) {
-  const { acceso, setAcceso, codigo, error, setError } = state;
+// inactive: ninguna opción aparece marcada (p. ej. cuando se eligió "Ejemplo" en la ventana de guardar).
+export function AccessPicker({ state, disabled = false, inactive = false, onPick }) {
+  const { codigo, error, setError } = state;
+  const acceso = inactive ? null : state.acceso;
+  const setAcceso = (key) => { state.setAcceso(key); onPick?.(key); };
   return (
     <div className="flex flex-col gap-2">
       {Object.entries(ACCESS_OPTIONS).map(([key, opt]) => (
