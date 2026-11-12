@@ -156,6 +156,7 @@ export default function EaEditor() {
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
     const [panelOpen, setPanelOpen] = useState(true);
+    const [cursor, setCursor] = useState({ linea: 1, columna: 1 });
     const [tema, setTema] = useState(() => {
         try { return localStorage.getItem(TEMA_STORAGE_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
     });
@@ -203,6 +204,12 @@ export default function EaEditor() {
                 lineWrapping: true
             });
             cmInstanceRef.current.setValue(CODIGO_BASE[selectedBoard]);
+            const actualizarCursor = (cm) => {
+                const { line, ch } = cm.getCursor();
+                setCursor({ linea: line + 1, columna: ch + 1 });
+            };
+            cmInstanceRef.current.on('cursorActivity', actualizarCursor);
+            actualizarCursor(cmInstanceRef.current);
         }
 
         const canalSerial = new BroadcastChannel('canal_arduino');
@@ -1097,6 +1104,9 @@ export default function EaEditor() {
                             <span>{isConnected ? 'Conectado' : 'Desconectado'}</span>
                             <span className="ide-status-sep" />
                             <span>baud: {isConnected ? baudRate : '—'}</span>
+                        </div>
+                        <div className="ide-status ide-cursor" title="Posición del cursor">
+                            Ln {cursor.linea}, Col {cursor.columna}
                         </div>
                     </div>
                 </div>
