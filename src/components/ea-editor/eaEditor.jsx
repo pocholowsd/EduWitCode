@@ -1066,19 +1066,51 @@ export default function EaEditor() {
                 </div>
             </div>
 
-            {placaPendiente && (
-                <div className="board-modal-backdrop" onClick={() => setPlacaPendiente(null)}>
-                    <div className="board-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-                        <h3>Cambiar a {NOMBRE_PLACA[placaPendiente]}</h3>
-                        <p>Se creará un programa vacío. ¿Quieres guardar el programa actual ({nombrePrograma + EXTENSION[selectedBoard]}) antes de continuar?</p>
-                        <div className="board-modal-actions">
-                            <button type="button" className="board-modal-btn" onClick={() => setPlacaPendiente(null)}>Cancelar</button>
-                            <button type="button" className="board-modal-btn" onClick={() => cambiarPlaca(placaPendiente)}>No guardar</button>
-                            <button type="button" className="board-modal-btn is-primary" onClick={() => abrirGuardar(placaPendiente)}>Guardar y crear nuevo</button>
+            <Modal open={Boolean(placaPendiente)} onClose={() => setPlacaPendiente(null)} maxWidth={420}>
+                {placaPendiente && (
+                    <>
+                        <div className="flex items-center justify-between border-b border-[#eef0f3] px-5 py-4">
+                            <h3 className="text-[15px] font-bold text-[#1c1f28]">Cambiar a {NOMBRE_PLACA[placaPendiente]}</h3>
+                            <button
+                                type="button"
+                                onClick={() => setPlacaPendiente(null)}
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-[#6b7180] transition-colors hover:bg-[#f4f5f7] hover:text-[#2c313a]"
+                            >
+                                <i className="bi bi-x-lg" />
+                            </button>
                         </div>
-                    </div>
-                </div>
-            )}
+
+                        <p className="px-5 py-4 text-[13px] leading-relaxed text-[#4a4f59]">
+                            Se creará un programa vacío. ¿Quieres guardar el programa actual ({nombrePrograma + EXTENSION[selectedBoard]}) antes de continuar?
+                        </p>
+
+                        <div className="flex items-center justify-end gap-2 border-t border-[#eef0f3] px-5 py-3.5">
+                            <button
+                                type="button"
+                                onClick={() => setPlacaPendiente(null)}
+                                className="rounded-lg border border-[#dde1e8] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#4a4f59] transition-colors hover:bg-[#f4f5f7]"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => cambiarPlaca(placaPendiente)}
+                                className="rounded-lg border border-red-200 px-3.5 py-1.5 text-[12.5px] font-semibold text-red-600 transition-colors hover:bg-red-50"
+                            >
+                                No guardar
+                            </button>
+                            <button
+                                type="button"
+                                autoFocus
+                                onClick={() => abrirGuardar(placaPendiente)}
+                                className="rounded-lg bg-brand-teal-dark px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-colors hover:bg-brand-teal"
+                            >
+                                Guardar y crear nuevo
+                            </button>
+                        </div>
+                    </>
+                )}
+            </Modal>
 
             <Modal open={Boolean(guardarDialogo)} onClose={() => setGuardarDialogo(null)} maxWidth={420}>
                 {guardarDialogo && (
