@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CodeMirror from 'codemirror';
 import 'codemirror/lib/codemirror.css';
-import 'codemirror/theme/dracula.css';
 import 'codemirror/mode/python/python';
 import 'codemirror/mode/clike/clike';
 import './ea-editor.css';
+import './arduinoMode';
 import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
 import { flashAvrHex, AVR_BOARD_PROFILES } from '../../api/stk500';
@@ -98,8 +98,18 @@ const NOMBRE_PLACA = {
 
 const MODO_EDITOR = {
     esp32: 'python',
-    arduino: 'text/x-c++src',
+    arduino: 'text/x-arduino',
 };
+
+const TEMA_STORAGE_KEY = 'editorTheme';
+
+function SunIcon() {
+    return <i className="bi bi-sun-fill" />;
+}
+
+function MoonIcon() {
+    return <i className="bi bi-moon-stars-fill" />;
+}
 
 // Programa guardado en la cuenta. remoteId null = aún no está guardado en la nube.
 const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, savedSnapshot: null };
@@ -146,6 +156,16 @@ export default function EaEditor() {
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
     const [panelOpen, setPanelOpen] = useState(true);
+    const [tema, setTema] = useState(() => {
+        try { return localStorage.getItem(TEMA_STORAGE_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+    });
+    const alternarTema = () => {
+        setTema((t) => {
+            const siguiente = t === 'light' ? 'dark' : 'light';
+            try { localStorage.setItem(TEMA_STORAGE_KEY, siguiente); } catch {}
+            return siguiente;
+        });
+    };
     const [terminal, setTerminal] = useState([]);
     const logSeqRef = useRef(0);
 
@@ -179,7 +199,7 @@ export default function EaEditor() {
             cmInstanceRef.current = CodeMirror.fromTextArea(editorTextAreaRef.current, {
                 lineNumbers: true,
                 mode: MODO_EDITOR[selectedBoard],
-                theme: "dracula",
+                theme: "arduino",
                 lineWrapping: true
             });
             cmInstanceRef.current.setValue(CODIGO_BASE[selectedBoard]);
@@ -952,7 +972,7 @@ export default function EaEditor() {
         <div className="ea-editor-container">
             {headerSlot ? createPortal(barraSuperior, headerSlot) : barraSuperior}
             <div className="container">
-                <div className="ide-container" ref={ideContainerRef}>
+                <div className={`ide-container ${tema === 'light' ? 'is-light' : ''}`} ref={ideContainerRef}>
                     <div className="ide-titlebar">
                         <div className="ide-dots">
                             <span className="ide-dot ide-dot-red" />
@@ -961,6 +981,18 @@ export default function EaEditor() {
                         </div>
                         <span className="ide-filename">{nombrePrograma + EXTENSION[selectedBoard]}</span>
                         <div className="ide-titlebar-actions">
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={tema === 'light'}
+                                aria-label="Modo claro"
+                                className="ide-theme-switch"
+                                title={tema === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+                                onClick={alternarTema}
+                            >
+                                <span className={`ide-theme-knob ${tema === 'light' ? 'is-sun' : ''}`}><SunIcon /></span>
+                                <span className={`ide-theme-knob ${tema === 'light' ? '' : 'is-moon'}`}><MoonIcon /></span>
+                            </button>
                             <button type="button" className="ide-icon-btn" title="Copiar código" onClick={copiarCodigo}>
                                 <CopyIcon />
                             </button>

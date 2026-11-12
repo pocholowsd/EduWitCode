@@ -110,9 +110,52 @@
 
 .ea-editor-container .editor-pane { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; padding-top: 10px; }
 .ea-editor-container .CodeMirror { flex-grow: 1; height: auto !important; font-size: 15px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; border-radius: 0; border: none; text-align: left; }
-.ea-editor-container .cm-s-dracula.CodeMirror, .ea-editor-container .cm-s-dracula .CodeMirror-gutters { background-color: #15171e !important; }
-.ea-editor-container .cm-s-dracula .CodeMirror-gutters { border-right: none; }
-.ea-editor-container .cm-s-dracula .CodeMirror-linenumber { color: #4b5060; }
+
+/* Colores del editor tomados de Arduino IDE (temas "Dark (Arduino)" y "Light (Arduino)"), igual que en EduBlocks. */
+.ea-editor-container .ide-container {
+    --ed-bg: #15171e; --ed-text: #dae3e3; --ed-gutter: #4b5060; --ed-cursor: #dae3e3; --ed-sel: rgba(127, 203, 205, 0.22);
+    --tok-comment: #7f8c8d; --tok-ctrl: #c1c700; --tok-type: #0ca1a6; --tok-const: #0ca1a6;
+    --tok-fn: #f39c12; --tok-num: #7fcbcd; --tok-str: #7fcbcd;
+}
+.ea-editor-container .ide-container.is-light {
+    --ed-bg: #ffffff; --ed-text: #4e5b61; --ed-gutter: #a0aaaf; --ed-cursor: #4e5b61; --ed-sel: rgba(0, 151, 157, 0.16);
+    --tok-comment: #95a5a6; --tok-ctrl: #728e00; --tok-type: #00979d; --tok-const: #00979d;
+    --tok-fn: #d35400; --tok-num: #005c5f; --tok-str: #005c5f;
+}
+.ea-editor-container .cm-s-arduino.CodeMirror, .ea-editor-container .cm-s-arduino .CodeMirror-gutters { background-color: var(--ed-bg); color: var(--ed-text); }
+.ea-editor-container .cm-s-arduino .CodeMirror-gutters { border-right: none; }
+.ea-editor-container .cm-s-arduino .CodeMirror-linenumber { color: var(--ed-gutter); }
+.ea-editor-container .cm-s-arduino .CodeMirror-cursor { border-left-color: var(--ed-cursor); }
+.ea-editor-container .cm-s-arduino .CodeMirror-selected,
+.ea-editor-container .cm-s-arduino.CodeMirror-focused .CodeMirror-selected { background: var(--ed-sel); }
+.ea-editor-container .cm-s-arduino .CodeMirror-line::selection,
+.ea-editor-container .cm-s-arduino .CodeMirror-line > span::selection,
+.ea-editor-container .cm-s-arduino .CodeMirror-line > span > span::selection { background: var(--ed-sel); }
+.ea-editor-container .cm-s-arduino .cm-comment { color: var(--tok-comment); }
+.ea-editor-container .cm-s-arduino .cm-keyword,
+.ea-editor-container .cm-s-arduino .cm-meta { color: var(--tok-ctrl); }
+.ea-editor-container .cm-s-arduino .cm-type,
+.ea-editor-container .cm-s-arduino .cm-variable-3 { color: var(--tok-type); }
+.ea-editor-container .cm-s-arduino .cm-atom { color: var(--tok-const); }
+.ea-editor-container .cm-s-arduino .cm-def,
+.ea-editor-container .cm-s-arduino .cm-builtin { color: var(--tok-fn); }
+.ea-editor-container .cm-s-arduino .cm-number { color: var(--tok-num); }
+.ea-editor-container .cm-s-arduino .cm-string,
+.ea-editor-container .cm-s-arduino .cm-string-2 { color: var(--tok-str); }
+.ea-editor-container .cm-s-arduino .cm-variable,
+.ea-editor-container .cm-s-arduino .cm-variable-2,
+.ea-editor-container .cm-s-arduino .cm-property,
+.ea-editor-container .cm-s-arduino .cm-operator,
+.ea-editor-container .cm-s-arduino .cm-punctuation { color: var(--ed-text); }
+.ea-editor-container .cm-s-arduino .CodeMirror-matchingbracket { color: var(--tok-fn) !important; text-decoration: underline; }
+
+/* Selector de tema claro / oscuro (mismo diseño que en EduBlocks) */
+.ea-editor-container .ide-theme-switch { display: inline-flex; align-items: center; gap: 4px; padding: 2px; background-color: #1c1f28; border: 1px solid #2c3140; border-radius: 999px; box-shadow: none; font-size: 11px; transition: border-color 0.15s ease, background-color 0.2s ease; }
+.ea-editor-container .ide-theme-switch:hover { border-color: #17c3a2; }
+.ea-editor-container .ide-theme-switch:active { transform: none; }
+.ea-editor-container .ide-theme-knob { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; color: #5c6270; transition: all 0.2s ease; }
+.ea-editor-container .ide-theme-knob.is-sun { background-color: #fbbf24; color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.ea-editor-container .ide-theme-knob.is-moon { background-color: #2c3140; color: #7dd3fc; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 
 .ea-editor-container .bottom-panel { position: relative; display: flex; flex-direction: column; border-top: 1px solid #262833; padding: 2px 8px 8px; flex-shrink: 0; text-align: left; }
 .ea-editor-container .bottom-panel-resizer { position: absolute; top: -5px; left: 0; right: 0; height: 10px; cursor: row-resize; touch-action: none; z-index: 3; }
@@ -187,3 +230,35 @@
         flex: 0 0 auto;
     }
 }
+
+/* Tema claro del IDE: mismos tonos que el modo claro del panel de código de EduBlocks */
+.ea-editor-container .ide-container.is-light { background-color: #ffffff; border-color: #e1e6e8; box-shadow: 0 10px 30px rgba(15,23,42,0.08); }
+.ea-editor-container .is-light .ide-titlebar,
+.ea-editor-container .is-light .bottom-panel,
+.ea-editor-container .is-light .ide-statusbar { border-color: #e1e6e8; }
+.ea-editor-container .is-light .ide-filename { color: #6b777d; }
+.ea-editor-container .is-light .ide-icon-btn { color: #6b777d; }
+.ea-editor-container .is-light .ide-icon-btn:hover { background-color: #f6f8f8; color: #4e5b61; }
+.ea-editor-container .is-light .ide-theme-switch { background-color: #f6f8f8; border-color: #d0d7da; }
+.ea-editor-container .is-light .ide-theme-switch:hover { border-color: #17c3a2; }
+.ea-editor-container .is-light .ide-theme-knob { color: #a0aaaf; }
+.ea-editor-container .is-light .ide-theme-knob.is-sun { color: #fff; }
+.ea-editor-container .is-light .bottom-panel-resizer::after { background-color: #d0d7da; }
+.ea-editor-container .is-light .bottom-panel-toggle { color: #0277bd; }
+.ea-editor-container .is-light .bottom-panel-toggle svg { color: #6b777d; }
+.ea-editor-container .is-light .panel-chip { background-color: #f6f8f8; border-color: #d0d7da; color: #4e5b61; }
+.ea-editor-container .is-light .panel-chip:hover { background-color: #e1e6e8; }
+.ea-editor-container .is-light .panel-output { background-color: #f6f8f8; border-color: #e1e6e8; color: #4e5b61; }
+.ea-editor-container .is-light .panel-output::-webkit-scrollbar-thumb { background-color: #d0d7da; }
+.ea-editor-container .is-light .log-empty { color: #a0aaaf; }
+.ea-editor-container .is-light .log-info { color: #6b777d; }
+.ea-editor-container .is-light .log-progress { color: #b45309; }
+.ea-editor-container .is-light .log-success { color: #0e8a6f; }
+.ea-editor-container .is-light .log-error { color: #dc2626; }
+.ea-editor-container .is-light .log-progress-track { background-color: #e1e6e8; }
+.ea-editor-container .is-light .ide-statusbar { color: #6b777d; }
+.ea-editor-container .is-light .ide-status-sep { background-color: #d0d7da; }
+.ea-editor-container .is-light .monitor-cmdbar-controls { background-color: #ffffff; border-color: #d0d7da; box-shadow: 0 8px 20px rgba(15,23,42,0.12); }
+.ea-editor-container .is-light .monitor-cmdbar-controls select { color: #4e5b61; border-color: #d0d7da; }
+.ea-editor-container .is-light .monitor-cmdbar-controls select option { background-color: #ffffff; }
+.ea-editor-container .is-light .monitor-cmdbar-controls input { background-color: #f6f8f8; color: #4e5b61; border-color: #d0d7da; }
