@@ -773,7 +773,7 @@ export default function EaEditor() {
         } catch (error) {
             // Los Nano (sobre todo clones) traen uno de dos bootloaders que responden a distinta velocidad.
             if (placa.fqbn.startsWith('arduino:avr:nano') && /sincron|sync|respond/i.test(errorMessage(error))) {
-                const otra = placa.id === 'nano-old' ? 'Arduino Nano' : 'Arduino Nano (bootloader antiguo)';
+                const otra = getPlacaArduino(placa.id === 'nano-old' ? 'nano' : 'nano-old').label;
                 throw new Error(`${errorMessage(error)} Si tu placa es un Nano, prueba seleccionar "${otra}" en Placa.`);
             }
             throw error;
