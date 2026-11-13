@@ -23,7 +23,7 @@ import {
     getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
     getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
     createProyectoUsuario, updateProyectoUsuario, updateAccesoProyecto,
-    getEjemplo, copiarEjemplo, createEjemplo,
+    getEjemplo, copiarEjemplo, createEjemplo, copiarProyectoPublico,
 } from '../cuenta/authApi';
 
 function MonitorIcon() {
@@ -113,8 +113,9 @@ function MoonIcon() {
 }
 
 // Programa guardado en la cuenta. remoteId null = aún no está guardado en la nube.
-// origenCodigo / origenEjemploId: abierto sin sesión desde un enlace o un ejemplo (al guardarlo queda como copia).
-const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, origenEjemploId: null, savedSnapshot: null };
+// origenCodigo / origenPublicoId / origenEjemploId: abierto sin sesión desde un enlace, un programa público
+// o un ejemplo (al guardarlo queda como copia en la Biblioteca).
+const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, origenPublicoId: null, origenEjemploId: null, savedSnapshot: null };
 
 const esCodigoInicial = (codigo, placa) => codigo.trim() === CODIGO_VACIO[placa].trim() || codigo === CODIGO_BASE[placa];
 
@@ -360,7 +361,7 @@ export default function EaEditor() {
                 setProyecto((p) => ({ ...p, nombre, savedSnapshot }));
                 logConsole(`Proyecto "${nombre}" actualizado en la nube.`, 'success');
             } else {
-                const data = await createProyectoUsuario(nombre, board, contenido, { codigo: proyecto.origenCodigo, ejemploId: proyecto.origenEjemploId });
+                const data = await createProyectoUsuario(nombre, board, contenido, { codigo: proyecto.origenCodigo, publicoId: proyecto.origenPublicoId, ejemploId: proyecto.origenEjemploId });
                 remoteId = data.proyecto.id;
                 const esCopia = data.proyecto.esCopia;
                 setProyecto((p) => ({ ...p, nombre, remoteId, esCopia, savedSnapshot }));
@@ -448,13 +449,14 @@ export default function EaEditor() {
             const loggedIn = Boolean(getToken());
             const loaders = {
                 usuario: getProyectoUsuario,
-                publico: getProyectoPublico,
+                // Compartidos, públicos y ejemplos: con sesión se abre (o se crea) la copia en Mi biblioteca.
+                publico: loggedIn ? copiarProyectoPublico : getProyectoPublico,
                 codigo: loggedIn ? copiarProyectoPorCodigo : getProyectoPorCodigo,
-                // Con sesión, un ejemplo se abre como copia en Mi biblioteca (se crea la primera vez).
                 ejemplo: loggedIn ? copiarEjemplo : getEjemplo,
             };
             const data = await loaders[source](id);
             const p = data.proyecto;
+            const esFuenteDeCopia = ['codigo', 'publico', 'ejemplo'].includes(source);
             const placa = Object.keys(NOMBRE_PLACA).find((k) => NOMBRE_PLACA[k] === p.board) ?? selectedBoard;
             const cm = cmInstanceRef.current;
             cm.setOption('mode', MODO_EDITOR[placa]);
@@ -463,11 +465,12 @@ export default function EaEditor() {
             setPlacaPendiente(null);
             setNombrePrograma(nombreArchivo(p.nombre) || NOMBRE_DEFAULT[placa]);
             setProyecto({
-                remoteId: source === 'usuario' || ((source === 'codigo' || source === 'ejemplo') && loggedIn) ? p.id : null,
+                remoteId: source === 'usuario' || (esFuenteDeCopia && loggedIn) ? p.id : null,
                 nombre: p.nombre,
                 codigo: p.codigo ?? null,
                 esCopia: Boolean(p.esCopia),
                 origenCodigo: source === 'codigo' && !loggedIn ? id : null,
+                origenPublicoId: source === 'publico' && !loggedIn ? id : null,
                 origenEjemploId: source === 'ejemplo' && !loggedIn ? id : null,
                 savedSnapshot: `${placa}\n${cm.getValue()}`,
             });
@@ -477,7 +480,7 @@ export default function EaEditor() {
                 else if (data.existente) logConsole('Ya tenías una copia de este ejemplo; se abrió tu copia de la Biblioteca.');
                 else logConsole('Se creó una copia del ejemplo en tu Biblioteca. Los cambios se guardan solo en tu copia.');
             }
-            if (source === 'codigo') {
+            if (source === 'codigo' || source === 'publico') {
                 if (!loggedIn) logConsole('Inicia sesión y guarda para tener tu copia en la Biblioteca.');
                 else if (data.existente) logConsole(`Ya tenías una copia de este programa de ${p.autor}; se abrió tu copia de la Biblioteca.`);
                 else if (!data.propio) logConsole(`Se creó una copia del programa de ${p.autor} en tu Biblioteca. Los cambios se guardan solo en tu copia.`);
@@ -1236,7 +1239,7 @@ export default function EaEditor() {
                 open={saveModalOpen}
                 initialName={proyecto.nombre ?? nombrePrograma}
                 remoteId={proyecto.remoteId}
-                showAccess={!proyecto.esCopia && !proyecto.origenCodigo && !proyecto.origenEjemploId}
+                showAccess={!proyecto.esCopia && !proyecto.origenCodigo && !proyecto.origenPublicoId && !proyecto.origenEjemploId}
                 isAdmin={isAdmin}
                 board={NOMBRE_PLACA[selectedBoard]}
                 saving={saving}

@@ -21,6 +21,7 @@ class ProyectoIn(BaseModel):
     contenido: Optional[str] = None
     origenCodigo: Optional[str] = None
     origenEjemploId: Optional[int] = None
+    origenPublicoId: Optional[int] = None
 
 
 class EjemploIn(BaseModel):
@@ -62,6 +63,27 @@ def to_project_summary(row: dict) -> dict:
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
+
+
+# Copia en la Biblioteca del usuario: se crea la primera vez y después se reutiliza la misma.
+# columna es origen_id (programa compartido o público de otra persona) u origen_ejemplo_id (ejemplo).
+def copiar_a_biblioteca(db, user_id: int, row: dict, columna: str, autor: str) -> dict:
+    assert columna in ("origen_id", "origen_ejemplo_id")
+    existing = query(
+        db,
+        f"SELECT * FROM proyectos_codigo WHERE usuario_id = %s AND {columna} = %s AND es_copia = 1 ORDER BY id LIMIT 1",
+        (user_id, row["id"]),
+    )
+    if existing:
+        return {"ok": True, "existente": True, "proyecto": {**to_public_project(existing[0]), "autor": autor}}
+
+    new_id = execute(
+        db,
+        f"INSERT INTO proyectos_codigo (usuario_id, nombre, board, contenido, es_copia, {columna}) VALUES (%s, %s, %s, %s, 1, %s)",
+        (user_id, row["nombre"], row["board"], row["contenido"], row["id"]),
+    )
+    rows = query(db, "SELECT * FROM proyectos_codigo WHERE id = %s", (new_id,))
+    return {"ok": True, "proyecto": {**to_public_project(rows[0]), "autor": autor}}
 
 
 # ---------------------------------------------------------------- Ejemplos
@@ -151,22 +173,7 @@ def copiar_ejemplo(ejemplo_id: int, user_id: int = Depends(require_auth), db=Dep
     rows = query(db, "SELECT * FROM ejemplos_codigo WHERE id = %s", (ejemplo_id,))
     if not rows:
         raise ApiError(404, "Ejemplo no encontrado.")
-    ejemplo = rows[0]
-    existing = query(
-        db,
-        "SELECT * FROM proyectos_codigo WHERE usuario_id = %s AND origen_ejemplo_id = %s AND es_copia = 1 ORDER BY id LIMIT 1",
-        (user_id, ejemplo_id),
-    )
-    if existing:
-        return {"ok": True, "existente": True, "proyecto": {**to_public_project(existing[0]), "autor": "Ejemplos"}}
-
-    new_id = execute(
-        db,
-        "INSERT INTO proyectos_codigo (usuario_id, nombre, board, contenido, es_copia, origen_ejemplo_id) VALUES (%s, %s, %s, %s, 1, %s)",
-        (user_id, ejemplo["nombre"], ejemplo["board"], ejemplo["contenido"], ejemplo_id),
-    )
-    rows = query(db, "SELECT * FROM proyectos_codigo WHERE id = %s", (new_id,))
-    return {"ok": True, "proyecto": {**to_public_project(rows[0]), "autor": "Ejemplos"}}
+    return copiar_a_biblioteca(db, user_id, rows[0], "origen_ejemplo_id", "Ejemplos")
 
 
 @router.get("/proyectos-usuario")
@@ -195,6 +202,22 @@ def get_proyecto_publico(proyecto_id: int, db=Depends(get_db)):
     if not rows:
         raise ApiError(404, "Programa no encontrado.")
     return {"ok": True, "proyecto": to_public_project(rows[0])}
+
+
+# Abre un programa público con sesión iniciada. El dueño recibe el original; cualquier otra persona,
+# su copia en la Biblioteca (se crea la primera vez y después se reutiliza).
+@router.post("/proyectos-publicos/{proyecto_id}/copia")
+def copiar_publico(proyecto_id: int, user_id: int = Depends(require_auth), db=Depends(get_db)):
+    rows = query(db, """
+        SELECT p.*, COALESCE(u.alias, u.nombre) AS autor FROM proyectos_codigo p JOIN usuarios u ON u.id = p.usuario_id
+        WHERE p.id = %s AND p.acceso = 'publico'
+    """, (proyecto_id,))
+    if not rows:
+        raise ApiError(404, "Programa no encontrado.")
+    row = rows[0]
+    if row["usuario_id"] == user_id:
+        return {"ok": True, "propio": True, "proyecto": {**to_project_summary(row), **to_public_project(row)}}
+    return copiar_a_biblioteca(db, user_id, row, "origen_id", row["autor"])
 
 
 CODIGO_ALFABETO = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -272,22 +295,7 @@ def copiar_por_codigo(codigo: str, user_id: int = Depends(require_auth), db=Depe
         raise ApiError(404, "No hay ningún programa compartido con ese código.")
     if row["usuario_id"] == user_id:
         return {"ok": True, "propio": True, "proyecto": {**to_project_summary(row), **to_public_project(row)}}
-
-    existing = query(
-        db,
-        "SELECT * FROM proyectos_codigo WHERE usuario_id = %s AND origen_id = %s AND es_copia = 1 ORDER BY id LIMIT 1",
-        (user_id, row["id"]),
-    )
-    if existing:
-        return {"ok": True, "existente": True, "proyecto": {**to_public_project(existing[0]), "autor": row["autor"]}}
-
-    new_id = execute(
-        db,
-        "INSERT INTO proyectos_codigo (usuario_id, nombre, board, contenido, es_copia, origen_id) VALUES (%s, %s, %s, %s, 1, %s)",
-        (user_id, row["nombre"], row["board"], row["contenido"], row["id"]),
-    )
-    rows = query(db, "SELECT * FROM proyectos_codigo WHERE id = %s", (new_id,))
-    return {"ok": True, "proyecto": {**to_public_project(rows[0]), "autor": row["autor"]}}
+    return copiar_a_biblioteca(db, user_id, row, "origen_id", row["autor"])
 
 
 # Copias del usuario. El autor que se muestra es el dueño del original.
@@ -320,8 +328,11 @@ def create_proyecto_usuario(body: ProyectoIn, user_id: int = Depends(require_aut
     if not body.nombre or body.contenido is None:
         raise ApiError(400, "Faltan nombre o contenido.")
 
-    # Programa abierto sin sesión desde un enlace o un ejemplo: se guarda como copia en la Biblioteca.
+    # Programa abierto sin sesión (enlace, público o ejemplo): se guarda como copia en la Biblioteca.
     origen = find_compartido(db, body.origenCodigo) if body.origenCodigo else None
+    if not origen and body.origenPublicoId:
+        rows = query(db, "SELECT * FROM proyectos_codigo WHERE id = %s AND acceso = 'publico'", (body.origenPublicoId,))
+        origen = rows[0] if rows else None
     origen_id = origen["id"] if origen and origen["usuario_id"] != user_id else None
     ejemplo_id = None
     if body.origenEjemploId:

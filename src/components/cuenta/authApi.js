@@ -64,11 +64,11 @@ export const listProyectosUsuario = () => request('/api/proyectos-usuario', { au
 
 export const getProyectoUsuario = (id) => request(`/api/proyectos-usuario/${id}`, { auth: true });
 
-// origen: { codigo } | { ejemploId } cuando el programa se abrió sin sesión (se guarda como copia en la Biblioteca).
+// origen: { codigo } | { publicoId } | { ejemploId } cuando el programa se abrió sin sesión (se guarda como copia en la Biblioteca).
 export const createProyectoUsuario = (nombre, board, contenido, origen = null) =>
   request('/api/proyectos-usuario', {
     method: 'POST',
-    body: { nombre, board, contenido, origenCodigo: origen?.codigo ?? null, origenEjemploId: origen?.ejemploId ?? null },
+    body: { nombre, board, contenido, origenCodigo: origen?.codigo ?? null, origenPublicoId: origen?.publicoId ?? null, origenEjemploId: origen?.ejemploId ?? null },
     auth: true,
   });
 
@@ -81,6 +81,9 @@ export const deleteProyectoUsuario = (id) =>
 export const listProyectosPublicos = () => request('/api/proyectos-publicos');
 
 export const getProyectoPublico = (id) => request(`/api/proyectos-publicos/${id}`);
+
+export const copiarProyectoPublico = (id) =>
+  request(`/api/proyectos-publicos/${id}/copia`, { method: 'POST', auth: true });
 
 export const getProyectoPorCodigo = (codigo) =>
   request(`/api/proyectos-codigo/${encodeURIComponent(codigo)}`, { auth: 'optional' });

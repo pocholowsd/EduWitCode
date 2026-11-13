@@ -16,7 +16,7 @@ import { extractCodigo } from './shareLink';
 
 const TABS = [
   { key: 'usuario', label: 'Mis programas', auth: true, fetch: listProyectosUsuario, empty: 'Tu lista de programas está vacía.' },
-  { key: 'biblioteca', label: 'Mi biblioteca', auth: true, fetch: listBiblioteca, empty: 'Aquí aparecerán tus copias de los programas compartidos y ejemplos que abras.' },
+  { key: 'biblioteca', label: 'Mi biblioteca', auth: true, fetch: listBiblioteca, empty: 'Aquí aparecerán tus copias de los programas compartidos, públicos y ejemplos que abras.' },
   { key: 'publico', label: 'Programas públicos', icon: 'bi-globe2', auth: false, fetch: listProyectosPublicos, empty: 'Aún no hay programas públicos.' },
   { key: 'ejemplos', label: 'Ejemplos', auth: false, fetch: listEjemplos, empty: 'Aún no hay ejemplos.' },
 ];

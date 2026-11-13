@@ -164,7 +164,7 @@ export default function SaveProjectModal({ open, initialName, remoteId, showAcce
           ) : (
             <>
               <p className="mt-1 rounded-lg bg-sky-50 px-3 py-2 text-[12px] text-sky-800">
-                <i className="bi bi-bookmark" /> Es una copia de un programa compartido o de un ejemplo: se guarda en tu Biblioteca y solo tú la ves.
+                <i className="bi bi-bookmark" /> Es una copia de un programa compartido, público o de un ejemplo: se guarda en tu Biblioteca y solo tú la ves.
               </p>
               {exampleOption && (
                 <>
