@@ -596,30 +596,39 @@ export default function EaEditor() {
                     }
                 }
             }
+            // La lectura terminó sin que se pidiera (se desconectó el cable o el dispositivo dejó de responder):
+            // se cierra la conexión en vez de dejar el botón en "Conectado".
             if (keepReadingRef.current && portRef.current && !portRef.current.readable) {
-                logConsole('Se perdió la lectura del puerto. Desconecta y vuelve a conectar la placa.', 'error');
+                logConsole('Se perdió la conexión con la placa. Revisa el cable y vuelve a conectarla.', 'error');
+                await liberarPuertoPorCompleto();
+                setIsConnected(false);
             }
         } catch (err) {
             console.error(err);
         }
     };
 
+    // Abre el puerto (si hace falta) y empieza a leer. Devuelve false si no se pudo abrir;
+    // en ese caso libera el puerto y deja el estado en "Desconectado".
     const abrirMonitorSerial = async (silent = false) => {
+        if (!portRef.current) return false;
+        const selectedBaudRate = parseInt(baudRate, 10);
         try {
-            if (!portRef.current) return;
-            const selectedBaudRate = parseInt(baudRate, 10);
-
             if (!portRef.current.readable) {
                 await portRef.current.open({ baudRate: selectedBaudRate, bufferSize: 8192 });
             }
-            if (!silent) {
-                logConsole(`Escuchando puerto serie (${selectedBaudRate} baudios)...`);
-            }
-            keepReadingRef.current = true;
-            readSerialLoop();
         } catch (e) {
-            logConsole(`Error: ${errorMessage(e)}`, 'error');
+            logConsole(`No se pudo abrir el puerto: ${errorMessage(e)}. Revisa que sea tu placa y que ningún otro programa la esté usando.`, 'error');
+            await liberarPuertoPorCompleto();
+            setIsConnected(false);
+            return false;
         }
+        if (!silent) {
+            logConsole(`Escuchando puerto serie (${selectedBaudRate} baudios)...`);
+        }
+        keepReadingRef.current = true;
+        readSerialLoop();
+        return true;
     };
 
     const conectar = async () => {
@@ -639,14 +648,14 @@ export default function EaEditor() {
                 resetToDefaultSerialBackend();
                 portRef.current = await serial.requestPort();
             }
-            if (usingWebUsbPolyfill) {
-                logConsole('Placa conectada (WebUSB).', 'success');
-            } else {
-                logConsole('Placa conectada.', 'success');
-            }
-            
+
+            // Solo se considera conectada si el puerto realmente se abre (p. ej. unos audífonos
+            // Bluetooth aparecen en la lista pero no se pueden abrir).
+            if (!(await abrirMonitorSerial(true))) return;
+
+            logConsole(usingWebUsbPolyfill ? 'Placa conectada (WebUSB).' : 'Placa conectada.', 'success');
+            logConsole(`Escuchando puerto serie (${parseInt(baudRate, 10)} baudios)...`);
             setIsConnected(true);
-            await abrirMonitorSerial();
         } catch (error) {
             if (isAndroid && selectedBoard === 'esp32') {
                 logConsole('Conexión cancelada o no se encontró la placa (se buscó por WebUSB, chip Silicon Labs CP210x). Si tu ESP32 usa otro chip (CH340, FTDI) no es compatible todavía.', 'error');
@@ -787,9 +796,9 @@ export default function EaEditor() {
                 const waitTime = selectedBoard === 'esp32' ? 2500 : 1000;
                 await new Promise(resolve => setTimeout(resolve, waitTime));
 
-                await abrirMonitorSerial(true);
+                const escuchando = await abrirMonitorSerial(true);
                 if (uploadSucceeded) {
-                    updateLog(statusId, '[ÉXITO] Subido con éxito (escuchando puerto serie)', 'success');
+                    updateLog(statusId, escuchando ? '[ÉXITO] Subido con éxito (escuchando puerto serie)' : '[ÉXITO] Subido con éxito', 'success');
                 }
             } else {
                 setIsConnected(false);
