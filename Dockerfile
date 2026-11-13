@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # Imagen unica: frontend (Vite build servido por nginx) + backend FastAPI
-# (uvicorn) + arduino-cli con el core AVR para /api/compile.
+# (uvicorn) + arduino-cli con los cores AVR y ESP32 para /api/compile.
 #
 #   docker build -t componentes-ems .
 #   docker run -d --name componentes-ems -p 80:80 --restart unless-stopped componentes-ems
@@ -31,11 +31,15 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends nginx curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# arduino-cli + core AVR (Arduino Uno, Nano y EduBoard)
+# arduino-cli + core AVR (Arduino Uno, Nano y EduBoard) + core ESP32 (ESP32 programado en C++).
+# El core ESP32 va fijo a la versión probada; es grande (incluye las herramientas de compilación).
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
       | BINDIR=/usr/local/bin sh \
+ && arduino-cli config init \
+ && arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json \
  && arduino-cli core update-index \
- && arduino-cli core install arduino:avr
+ && arduino-cli core install arduino:avr \
+ && arduino-cli core install esp32:esp32@3.3.11
 
 WORKDIR /srv/backend
 COPY backend/requirements.txt ./

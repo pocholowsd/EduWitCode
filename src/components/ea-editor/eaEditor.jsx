@@ -10,6 +10,7 @@ import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
 import { flashAvrHex, AVR_BOARD_PROFILES } from '../../api/stk500';
 import { PLACAS_ARDUINO, PLACA_ARDUINO_DEFAULT, getPlacaArduino } from '../../api/placasArduino';
+import { flashearProgramaEsp32 } from '../../api/esp32Arduino';
 import { MICROPYTHON_BAUD, subirSiTieneMicroPython, subirCodigoMicroPython, flashearFirmwareMicroPython } from '../../api/esp32MicroPython';
 import CuentaHeader, { EnlaceModal } from '../cuenta/CuentaHeader';
 import LoginModal from '../cuenta/auth/LoginModal';
@@ -165,6 +166,8 @@ export default function EaEditor() {
     const [placaArduino, setPlacaArduino] = useState(() => {
         try { return getPlacaArduino(localStorage.getItem(PLACA_ARDUINO_STORAGE_KEY) || PLACA_ARDUINO_DEFAULT).id; } catch { return PLACA_ARDUINO_DEFAULT; }
     });
+    // La placa física es un ESP32: con MicroPython o con Arduino (C++) en el ESP32 Dev Kit.
+    const esPlacaEsp32 = selectedBoard === 'esp32' || getPlacaArduino(placaArduino).familia === 'esp';
     const cambiarPlacaArduino = (id) => {
         setPlacaArduino(id);
         try { localStorage.setItem(PLACA_ARDUINO_STORAGE_KEY, id); } catch {}
@@ -655,7 +658,7 @@ export default function EaEditor() {
             canalSerial.postMessage('suelta_el_puerto');
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            if (selectedBoard === 'esp32') {
+            if (esPlacaEsp32) {
                 portRef.current = await requestPortPreferringNativeOnAndroid();
             } else {
                 resetToDefaultSerialBackend();
@@ -670,7 +673,7 @@ export default function EaEditor() {
             logConsole(`Escuchando puerto serie (${parseInt(baudRate, 10)} baudios)...`);
             setIsConnected(true);
         } catch (error) {
-            if (isAndroid && selectedBoard === 'esp32') {
+            if (isAndroid && esPlacaEsp32) {
                 logConsole('Conexión cancelada o no se encontró la placa (se buscó por WebUSB, chip Silicon Labs CP210x). Si tu ESP32 usa otro chip (CH340, FTDI) no es compatible todavía.', 'error');
             } else if (usingWebUsbPolyfill) {
                 logConsole('Conexión cancelada o dispositivo no compatible con WebUSB (el adaptador debe exponer una interfaz CDC-ACM; adaptadores CP2102/CH340/FTDI no funcionan con este polyfill).', 'error');
@@ -755,16 +758,23 @@ export default function EaEditor() {
     const subirArduinoDesdeNavegador = async (code, onProgress = () => {}) => {
         const placa = getPlacaArduino(placaArduino);
         const data = await postJson(`${API_BASE}/api/compile`, { code, board: placa.fqbn });
-        if (!data?.hex) {
-            throw new Error('El servidor no devolvió el firmware compilado.');
-        }
 
         const ports = await serial.getPorts();
         if (ports.length === 0) {
             throw new Error('No hay ningún dispositivo vinculado. Reconecta la placa.');
         }
-
         const port = ports[0];
+
+        // ESP32 en C++: el servidor devuelve varios .bin que se graban con esptool-js (abre y cierra el puerto).
+        if (placa.familia === 'esp') {
+            if (!data?.files?.length) throw new Error('El servidor no devolvió el programa compilado.');
+            await flashearProgramaEsp32(port, data.files, (msg) => console.log('[ESP32]', msg), onProgress);
+            return;
+        }
+
+        if (!data?.hex) {
+            throw new Error('El servidor no devolvió el firmware compilado.');
+        }
         await port.open({ baudRate: AVR_BOARD_PROFILES[placa.fqbn].baudRate });
         try {
             await flashAvrHex(port, data.hex, placa.fqbn, (msg) => {
@@ -814,7 +824,7 @@ export default function EaEditor() {
             if (ports.length > 0) {
                 portRef.current = ports[0];
 
-                const waitTime = selectedBoard === 'esp32' ? 2500 : 1000;
+                const waitTime = esPlacaEsp32 ? 2500 : 1000;
                 await new Promise(resolve => setTimeout(resolve, waitTime));
 
                 const escuchando = await abrirMonitorSerial(true);
