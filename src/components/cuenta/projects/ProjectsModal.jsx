@@ -21,10 +21,10 @@ const TABS = [
   { key: 'ejemplos', label: 'Ejemplos', auth: false, fetch: listEjemplos, empty: 'Aún no hay ejemplos.' },
 ];
 
-// Placas del editor de código: el valor es el que se guarda con cada programa (columna board).
+// Lenguajes del editor de código: el valor es el que se guarda con cada programa (columna board).
 export const PLACAS = [
-  { value: 'MicroPython', label: 'MicroPython (ESP32)' },
-  { value: 'Arduino C', label: 'Arduino C (Arduino Uno)' },
+  { value: 'MicroPython', label: 'MicroPython' },
+  { value: 'Arduino C', label: 'Arduino' },
 ];
 
 const ALL_BOARDS = 'all';
@@ -200,7 +200,7 @@ export default function ProjectsModal({
     [items, tab],
   );
 
-  // Placas del editor más cualquier otra que tenga algo en esta pestaña.
+  // Lenguajes del editor más cualquier otra que tenga algo en esta pestaña.
   const boardOptions = useMemo(() => {
     const values = new Set(PLACAS.map((p) => p.value));
     items.forEach((p) => p.board && values.add(p.board));
@@ -315,13 +315,13 @@ export default function ProjectsModal({
           <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#eef0f3] px-4 py-2.5 sm:px-5">
             <label className="flex min-w-0 items-center gap-2 text-[12.5px] font-semibold text-[#4a4f59]">
               <i className="bi bi-cpu text-[#8a90a0]" />
-              <span className="shrink-0">Placa:</span>
+              <span className="shrink-0">Lenguaje:</span>
               <select
                 value={boardFilter}
                 onChange={(e) => { setBoardFilter(e.target.value); setSelectedId(null); }}
                 className="min-w-0 cursor-pointer rounded-lg border border-[#dde1e8] bg-white px-2 py-1.5 text-[12.5px] font-semibold text-[#2c313a] outline-none transition-colors focus:border-brand-teal"
               >
-                <option value={ALL_BOARDS}>Todas las placas</option>
+                <option value={ALL_BOARDS}>Todos los lenguajes</option>
                 {boardOptions.map((value) => <option key={value} value={value}>{boardLabel(value)}</option>)}
               </select>
             </label>
@@ -355,7 +355,7 @@ export default function ProjectsModal({
               </p>
               {boardFilter !== ALL_BOARDS && items.length > 0 && (
                 <button type="button" className="text-[12.5px] font-bold text-brand-teal-dark hover:underline" onClick={() => setBoardFilter(ALL_BOARDS)}>
-                  Ver todas las placas
+                  Ver todos los lenguajes
                 </button>
               )}
             </div>

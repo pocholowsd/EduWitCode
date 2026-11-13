@@ -31,7 +31,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends nginx curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# arduino-cli + core AVR (Arduino Uno)
+# arduino-cli + core AVR (Arduino Uno, Nano y EduBoard)
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
       | BINDIR=/usr/local/bin sh \
  && arduino-cli core update-index \
@@ -42,6 +42,7 @@ COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/firmware ./firmware
+COPY backend/libraries ./libraries
 
 COPY --from=web /app/dist /usr/share/nginx/html
 

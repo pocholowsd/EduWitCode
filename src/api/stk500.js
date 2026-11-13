@@ -16,8 +16,11 @@ const STK = {
 
 const MEM_FLASH = 0x46;
 
+// Por fqbn. Uno y Nano usan el mismo chip (ATmega328P); el Nano con bootloader antiguo responde a 57600.
 export const AVR_BOARD_PROFILES = {
     'arduino:avr:uno': { name: 'Arduino Uno', pageSize: 128, signature: [0x1e, 0x95, 0x0f], baudRate: 115200 },
+    'arduino:avr:nano': { name: 'Arduino Nano', pageSize: 128, signature: [0x1e, 0x95, 0x0f], baudRate: 115200 },
+    'arduino:avr:nano:cpu=atmega328old': { name: 'Arduino Nano (bootloader antiguo)', pageSize: 128, signature: [0x1e, 0x95, 0x0f], baudRate: 57600 },
 };
 
 function parseIntelHex(hexText) {

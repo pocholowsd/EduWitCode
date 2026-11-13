@@ -80,9 +80,9 @@ export default function ExampleFormModal({ open, board, initial, defaultName, ca
           </label>
 
           <div className="flex items-center gap-2 text-[12.5px] text-[#4a4f59]">
-            <span className="font-semibold">Placa:</span>
+            <span className="font-semibold">Lenguaje:</span>
             <span className="rounded-full bg-[#f4f5f7] px-2.5 py-0.5 font-semibold">{board}</span>
-            <span className="text-[11px] text-[#9aa0ad]">(la del programa abierto)</span>
+            <span className="text-[11px] text-[#9aa0ad]">(el del programa abierto)</span>
           </div>
 
           {error && <p className="text-[12px] font-semibold text-red-500">{error}</p>}

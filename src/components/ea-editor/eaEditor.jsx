@@ -9,6 +9,7 @@ import './arduinoMode';
 import { API_BASE } from '../../api/client';
 import { serial, isSerialSupported, usingWebUsbPolyfill, getSerialUnsupportedMessage, errorMessage, requestPortPreferringNativeOnAndroid, resetToDefaultSerialBackend, isAndroid } from '../../api/webSerial';
 import { flashAvrHex, AVR_BOARD_PROFILES } from '../../api/stk500';
+import { PLACAS_ARDUINO, PLACA_ARDUINO_DEFAULT, getPlacaArduino } from '../../api/placasArduino';
 import { MICROPYTHON_BAUD, subirSiTieneMicroPython, subirCodigoMicroPython, flashearFirmwareMicroPython } from '../../api/esp32MicroPython';
 import CuentaHeader, { EnlaceModal } from '../cuenta/CuentaHeader';
 import LoginModal from '../cuenta/auth/LoginModal';
@@ -103,6 +104,7 @@ const MODO_EDITOR = {
 };
 
 const TEMA_STORAGE_KEY = 'editorTheme';
+const PLACA_ARDUINO_STORAGE_KEY = 'placaArduino';
 
 function SunIcon() {
     return <i className="bi bi-sun-fill" />;
@@ -158,7 +160,15 @@ export default function EaEditor() {
     const [showCmdBar, setShowCmdBar] = useState(false);
     const [lineEnding, setLineEnding] = useState("nl");
     const [cmdInput, setCmdInput] = useState("");
-    const [panelOpen, setPanelOpen] = useState(true);    const [tema, setTema] = useState(() => {
+    const [panelOpen, setPanelOpen] = useState(true);
+    // Placa a la que se compila y sube cuando el lenguaje es Arduino (se recuerda en este navegador).
+    const [placaArduino, setPlacaArduino] = useState(() => {
+        try { return getPlacaArduino(localStorage.getItem(PLACA_ARDUINO_STORAGE_KEY) || PLACA_ARDUINO_DEFAULT).id; } catch { return PLACA_ARDUINO_DEFAULT; }
+    });
+    const cambiarPlacaArduino = (id) => {
+        setPlacaArduino(id);
+        try { localStorage.setItem(PLACA_ARDUINO_STORAGE_KEY, id); } catch {}
+    };    const [tema, setTema] = useState(() => {
         try { return localStorage.getItem(TEMA_STORAGE_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
     });
     const alternarTema = () => {
@@ -743,7 +753,8 @@ export default function EaEditor() {
     };
 
     const subirArduinoDesdeNavegador = async (code, onProgress = () => {}) => {
-        const data = await postJson(`${API_BASE}/api/compile`, { code, board: 'arduino:avr:uno' });
+        const placa = getPlacaArduino(placaArduino);
+        const data = await postJson(`${API_BASE}/api/compile`, { code, board: placa.fqbn });
         if (!data?.hex) {
             throw new Error('El servidor no devolvió el firmware compilado.');
         }
@@ -754,11 +765,18 @@ export default function EaEditor() {
         }
 
         const port = ports[0];
-        await port.open({ baudRate: AVR_BOARD_PROFILES['arduino:avr:uno'].baudRate });
+        await port.open({ baudRate: AVR_BOARD_PROFILES[placa.fqbn].baudRate });
         try {
-            await flashAvrHex(port, data.hex, 'arduino:avr:uno', (msg) => {
+            await flashAvrHex(port, data.hex, placa.fqbn, (msg) => {
                 console.log('[FLASH]', msg);
             }, onProgress);
+        } catch (error) {
+            // Los Nano (sobre todo clones) traen uno de dos bootloaders que responden a distinta velocidad.
+            if (placa.fqbn.startsWith('arduino:avr:nano') && /sincron|sync|respond/i.test(errorMessage(error))) {
+                const otra = placa.id === 'nano-old' ? 'Arduino Nano' : 'Arduino Nano (bootloader antiguo)';
+                throw new Error(`${errorMessage(error)} Si tu placa es un Nano, prueba seleccionar "${otra}" en Placa.`);
+            }
+            throw error;
         } finally {
             try { await port.close(); } catch (e) {}
         }
@@ -894,7 +912,7 @@ export default function EaEditor() {
     const toolbar = (
         <div className="ea-toolbar">
             <div className={`tb-settings ${showSettings ? 'is-open' : ''}`} ref={settingsRef}>
-                <button type="button" className="tb-settings-toggle" title="Placa, proyecto y baudios" onClick={() => setShowSettings((v) => !v)}>
+                <button type="button" className="tb-settings-toggle" title="Lenguaje, proyecto y baudios" onClick={() => setShowSettings((v) => !v)}>
                     <i className="bi bi-sliders" />
                 </button>
 
@@ -915,13 +933,22 @@ export default function EaEditor() {
                         </button>
                     </div>
 
-                    <div className="tb-field">
-                        <label htmlFor="boardSelect">Placa:</label>
+                    <div className="tb-field tb-field-lenguaje">
+                        <label htmlFor="boardSelect">Lenguaje:</label>
                         <select id="boardSelect" value={selectedBoard} onChange={handleBoardChange}>
                             <option value="esp32">MicroPython</option>
                             <option value="arduino">Arduino</option>
                         </select>
                     </div>
+
+                    {selectedBoard === 'arduino' && (
+                        <div className="tb-field tb-field-placa">
+                            <label htmlFor="placaArduino">Placa:</label>
+                            <select id="placaArduino" value={placaArduino} onChange={(e) => cambiarPlacaArduino(e.target.value)}>
+                                {PLACAS_ARDUINO.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="tb-field tb-field-baud">
                         <label htmlFor="baudRate">Baudios:</label>

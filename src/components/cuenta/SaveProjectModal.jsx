@@ -112,9 +112,9 @@ export default function SaveProjectModal({ open, initialName, remoteId, showAcce
             />
           </label>
           <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#4a4f59]">
-            <span className="font-semibold">Placa:</span>
+            <span className="font-semibold">Lenguaje:</span>
             <span className="rounded-full bg-white px-2.5 py-0.5 font-semibold ring-1 ring-[#dde1e8]">{board}</span>
-            <span className="text-[11px] text-[#9aa0ad]">la del programa abierto</span>
+            <span className="text-[11px] text-[#9aa0ad]">el del programa abierto</span>
           </div>
         </div>
       )}
