@@ -954,7 +954,7 @@ export default function EaEditor() {
                     {selectedBoard === 'arduino' && (
                         <div className="tb-field tb-field-placa">
                             <label htmlFor="placaArduino">Placa:</label>
-                            <select id="placaArduino" value={placaArduino} onChange={(e) => cambiarPlacaArduino(e.target.value)}>
+                            <select id="placaArduino" value={placaArduino} title={getPlacaArduino(placaArduino).label} onChange={(e) => cambiarPlacaArduino(e.target.value)}>
                                 {PLACAS_ARDUINO.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                             </select>
                         </div>
