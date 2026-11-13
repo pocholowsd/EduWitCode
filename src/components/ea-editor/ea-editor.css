@@ -80,6 +80,26 @@
     .ea-toolbar .tb-connect .tb-status { position: static; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: rgba(180, 83, 9, 0.8); }
     .ea-toolbar .tb-connect .tb-status-dot { width: 6px; height: 6px; box-shadow: none; }
     .ea-toolbar .tb-connect.is-connected .tb-status { color: #059669; }
+
+    /* Que toda la barra quepa en un renglón junto al logo: espacios más compactos y sin el texto
+       "Conectado/Desconectado" (el punto de color y el texto del botón ya indican el estado). */
+    .ea-toolbar, .ea-toolbar .tb-settings-panel { gap: 10px; }
+    .ea-toolbar .tb-group { gap: 6px; }
+    .ea-toolbar .tb-field { gap: 6px; }
+    .ea-toolbar .tb-field-lenguaje select { min-width: 120px; }
+    .ea-toolbar .tb-field-placa select { width: 165px; }
+    .ea-toolbar .tb-connect .tb-status .tb-label { display: none; }
+}
+
+/* Pantallas medianas: Nuevo, Abrir y Guardar solo con ícono (el nombre queda en el tooltip). */
+@media (min-width: 1280px) and (max-width: 1799px) {
+    .ea-toolbar .tb-group-proyecto .tb-label, .ea-toolbar .tb-group-guardar .tb-label { display: none; }
+    .ea-toolbar .tb-group-proyecto .tb-btn, .ea-toolbar .tb-group-guardar .tb-btn { width: 36px; padding: 0; }
+}
+
+/* Antes de pasar todo al menú: sin las etiquetas "Lenguaje:", "Placa:" y "Baudios:" (el selector las lleva en el tooltip). */
+@media (min-width: 1280px) and (max-width: 1499px) {
+    .ea-toolbar .tb-field label { display: none; }
 }
 
 .ea-editor-container { 

@@ -945,7 +945,7 @@ export default function EaEditor() {
 
                     <div className="tb-field tb-field-lenguaje">
                         <label htmlFor="boardSelect">Lenguaje:</label>
-                        <select id="boardSelect" value={selectedBoard} onChange={handleBoardChange}>
+                        <select id="boardSelect" title="Lenguaje" value={selectedBoard} onChange={handleBoardChange}>
                             <option value="esp32">MicroPython</option>
                             <option value="arduino">Arduino</option>
                         </select>
@@ -954,7 +954,7 @@ export default function EaEditor() {
                     {selectedBoard === 'arduino' && (
                         <div className="tb-field tb-field-placa">
                             <label htmlFor="placaArduino">Placa:</label>
-                            <select id="placaArduino" value={placaArduino} title={getPlacaArduino(placaArduino).label} onChange={(e) => cambiarPlacaArduino(e.target.value)}>
+                            <select id="placaArduino" value={placaArduino} title={`Placa: ${getPlacaArduino(placaArduino).label}`} onChange={(e) => cambiarPlacaArduino(e.target.value)}>
                                 {PLACAS_ARDUINO.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                             </select>
                         </div>
@@ -962,7 +962,7 @@ export default function EaEditor() {
 
                     <div className="tb-field tb-field-baud">
                         <label htmlFor="baudRate">Baudios:</label>
-                        <select id="baudRate" value={baudRate} onChange={handleBaudChange}>
+                        <select id="baudRate" title="Baudios" value={baudRate} onChange={handleBaudChange}>
                             <option value="9600">9600</option>
                             <option value="19200">19200</option>
                             <option value="38400">38400</option>
