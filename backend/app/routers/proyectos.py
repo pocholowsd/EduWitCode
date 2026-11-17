@@ -61,6 +61,8 @@ def to_project_summary(row: dict) -> dict:
         "autor": row["autor"],
         "origen": row.get("origen"),
         "usos": row.get("usos"),
+        "autorId": row.get("autor_id"),
+        "verificado": bool(row.get("verificado")),
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
@@ -188,16 +190,35 @@ def list_proyectos_usuario(user_id: int = Depends(require_auth), db=Depends(get_
 
 
 # usos = personas distintas que tienen una copia en su Biblioteca (cada quien cuenta una sola vez,
-# porque la copia se reutiliza). Ordenados de más a menos usados; el cliente puede reordenar por fecha.
+# porque la copia se reutiliza). Ordenados de más a menos usados; con los mismos usos va primero el de un
+# profesor verificado. El cliente puede reordenar por fecha.
 @router.get("/proyectos-publicos")
 def list_proyectos_publicos(db=Depends(get_db)):
     rows = query(db, """
         SELECT p.id, p.nombre, p.board, p.acceso, p.updated_at, p.created_at, COALESCE(u.alias, u.nombre) AS autor,
+          p.usuario_id AS autor_id, (v.usuario_id IS NOT NULL) AS verificado,
           (SELECT COUNT(DISTINCT c.usuario_id) FROM proyectos_codigo c WHERE c.origen_id = p.id AND c.es_copia = 1) AS usos
         FROM proyectos_codigo p JOIN usuarios u ON u.id = p.usuario_id
-        WHERE p.acceso = 'publico' ORDER BY usos DESC, p.updated_at DESC
+        LEFT JOIN usuarios_verificados v ON v.usuario_id = p.usuario_id
+        WHERE p.acceso = 'publico' ORDER BY usos DESC, verificado DESC, p.updated_at DESC
     """)
     return {"ok": True, "proyectos": [to_project_summary(r) for r in rows]}
+
+
+class VerificadoIn(BaseModel):
+    verificado: bool
+
+
+# Marca o desmarca a un autor como profesor verificado (solo administradores).
+@router.put("/usuarios/{usuario_id}/verificado")
+def set_verificado(usuario_id: int, body: VerificadoIn, _admin: int = Depends(require_admin), db=Depends(get_db)):
+    if not query(db, "SELECT id FROM usuarios WHERE id = %s", (usuario_id,)):
+        raise ApiError(404, "Usuario no encontrado.")
+    if body.verificado:
+        execute(db, "INSERT IGNORE INTO usuarios_verificados (usuario_id) VALUES (%s)", (usuario_id,))
+    else:
+        execute(db, "DELETE FROM usuarios_verificados WHERE usuario_id = %s", (usuario_id,))
+    return {"ok": True, "verificado": body.verificado}
 
 
 @router.get("/proyectos-publicos/{proyecto_id}")

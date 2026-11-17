@@ -153,6 +153,17 @@ def migrate() -> None:
                     REFERENCES ejemplos_codigo(id) ON DELETE SET NULL
             """)
 
+        # Profesores verificados (insignia en los programas públicos). Tabla propia de EMS para no
+        # tocar usuarios, que es compartida con bloques. Solo un administrador agrega o quita cuentas.
+        execute(conn, """
+            CREATE TABLE IF NOT EXISTS usuarios_verificados (
+              usuario_id INT PRIMARY KEY,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              CONSTRAINT fk_usuarios_verificados_usuario FOREIGN KEY (usuario_id)
+                REFERENCES usuarios(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+
         if query(conn, "SELECT COUNT(*) AS n FROM ejemplos_codigo")[0]["n"] == 0:
             for e in EJEMPLOS_INICIALES:
                 execute(

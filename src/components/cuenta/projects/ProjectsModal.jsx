@@ -9,6 +9,7 @@ import {
   listEjemplos,
   updateEjemplo,
   deleteEjemplo,
+  setAutorVerificado,
 } from '../authApi';
 import AccessModal, { ACCESS_OPTIONS } from './AccessModal';
 import ExampleFormModal from './ExampleFormModal';
@@ -31,7 +32,10 @@ const ALL_BOARDS = 'all';
 
 // Orden de los programas públicos. El servidor ya los manda por popularidad.
 const SORTS = {
-  usos: { label: 'Más usados', compare: (a, b) => (b.usos ?? 0) - (a.usos ?? 0) || new Date(b.updatedAt) - new Date(a.updatedAt) },
+  usos: {
+    label: 'Más usados',
+    compare: (a, b) => (b.usos ?? 0) - (a.usos ?? 0) || Number(b.verificado) - Number(a.verificado) || new Date(b.updatedAt) - new Date(a.updatedAt),
+  },
   recientes: { label: 'Más recientes', compare: (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt) },
 };
 
@@ -48,7 +52,10 @@ const ORIGIN_BADGES = {
   ejemplo: { label: 'Ejemplo', icon: 'bi-journal-code', tone: 'bg-violet-50 text-violet-700' },
 };
 
-function ProjectCard({ title, board, autor, updatedAt, usos, description, origin, selected, onClick, onDoubleClick, onDelete, access, onEditAccess, onReplace }) {
+function ProjectCard({
+  title, board, autor, updatedAt, usos, verificado, onToggleVerified, description, origin, selected,
+  onClick, onDoubleClick, onDelete, access, onEditAccess, onReplace,
+}) {
   return (
     <button
       type="button"
@@ -58,7 +65,7 @@ function ProjectCard({ title, board, autor, updatedAt, usos, description, origin
         selected ? 'border-brand-teal bg-[#effaf7] shadow-sm' : 'border-[#e4e7ec] bg-white hover:border-[#c9ced9] hover:shadow-sm'
       }`}
     >
-      <div className={`w-full min-w-0 ${access || onReplace ? 'pr-16' : onDelete ? 'pr-7' : ''}`}>
+      <div className={`w-full min-w-0 ${access || onReplace ? 'pr-16' : onDelete || onToggleVerified ? 'pr-7' : ''}`}>
         <p className="truncate text-[13px] font-semibold text-[#1c1f28]">{title}</p>
         {board && <p className="truncate text-[11px] text-[#8a90a0]">{boardLabel(board)}</p>}
       </div>
@@ -74,6 +81,11 @@ function ProjectCard({ title, board, autor, updatedAt, usos, description, origin
             <span className="flex min-w-0 items-center gap-1" title="Autor">
               <i className="bi bi-person text-[#a6acb8]" />
               <span className="truncate">{autor}</span>
+              {verificado && (
+                <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700" title="Profesor verificado">
+                  <i className="bi bi-patch-check-fill" /> Profesor
+                </span>
+              )}
             </span>
           )}
           {updatedAt && (
@@ -112,6 +124,19 @@ function ProjectCard({ title, board, autor, updatedAt, usos, description, origin
           <i className="bi bi-arrow-repeat" />
         </span>
       )}
+      {onToggleVerified && (
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => { e.stopPropagation(); onToggleVerified(); }}
+          className={`absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-[12px] transition-all hover:bg-amber-50 pointer-coarse:opacity-100 ${
+            verificado ? 'text-amber-500 opacity-100' : 'text-[#b0b5c0] opacity-0 group-hover:opacity-100 hover:text-amber-600'
+          }`}
+          title={verificado ? 'Quitar insignia de profesor a este autor' : 'Marcar a este autor como profesor'}
+        >
+          <i className={`bi ${verificado ? 'bi-patch-check-fill' : 'bi-patch-check'}`} />
+        </span>
+      )}
       {onDelete && (
         <span
           role="button"
@@ -134,6 +159,7 @@ export default function ProjectsModal({
 }) {
   const [boardFilter, setBoardFilter] = useState(ALL_BOARDS);
   const [sort, setSort] = useState('usos');
+  const [onlyVerified, setOnlyVerified] = useState(false);
   // Formulario de ejemplo (solo admin): { initial: ejemplo a reemplazar }.
   const [exampleForm, setExampleForm] = useState(null);
   const [exampleSaving, setExampleSaving] = useState(false);
@@ -194,8 +220,9 @@ export default function ProjectsModal({
     const query = search.toLowerCase();
     const list = items.filter((p) => (boardFilter === ALL_BOARDS || p.board === boardFilter)
       && (p.nombre.toLowerCase().includes(query) || (p.categoria || '').toLowerCase().includes(query)));
-    return tab === 'publico' ? [...list].sort(SORTS[sort].compare) : list;
-  }, [items, search, showingCode, codeLookup, boardFilter, tab, sort]);
+    if (tab !== 'publico') return list;
+    return (onlyVerified ? list.filter((p) => p.verificado) : [...list]).sort(SORTS[sort].compare);
+  }, [items, search, showingCode, codeLookup, boardFilter, tab, sort, onlyVerified]);
 
   // Ejemplos agrupados por categoría, en orden alfabético.
   const exampleGroups = useMemo(() => {
@@ -273,7 +300,18 @@ export default function ProjectsModal({
     }
   };
 
-  const handleAccessSaved = (id, acceso, codigoProyecto) => {
+  // La insignia es del autor: se actualizan todas sus tarjetas.
+  const handleToggleVerified = async (p) => {
+    const verificado = !p.verificado;
+    try {
+      await setAutorVerificado(p.autorId, verificado);
+      setItems((prev) => prev.map((x) => (x.autorId === p.autorId ? { ...x, verificado } : x)));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleAccessSaved =(id, acceso, codigoProyecto) => {
     setItems((prev) => prev.map((p) => (p.id === id ? { ...p, acceso, codigo: codigoProyecto } : p)));
   };
 
@@ -352,6 +390,18 @@ export default function ProjectsModal({
                 </select>
               </label>
             )}
+            {tab === 'publico' && (
+              <button
+                type="button"
+                onClick={() => { setOnlyVerified((v) => !v); setSelectedId(null); }}
+                aria-pressed={onlyVerified}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                  onlyVerified ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-[#dde1e8] bg-white text-[#6b7180] hover:bg-[#f4f5f7]'
+                }`}
+              >
+                <i className={`bi ${onlyVerified ? 'bi-patch-check-fill' : 'bi-patch-check'}`} /> Solo profesores
+              </button>
+            )}
           </div>
         )}
 
@@ -376,10 +426,17 @@ export default function ProjectsModal({
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
               <i className="bi bi-inbox text-3xl text-[#c9ced9]" />
               <p className="text-[13px] text-[#8a90a0]">
-                {boardFilter !== ALL_BOARDS && items.length > 0
-                  ? `No hay ${tab === 'ejemplos' ? 'ejemplos' : 'programas'} para ${boardLabel(boardFilter)}.`
-                  : currentTab.empty}
+                {tab === 'publico' && onlyVerified && items.length > 0
+                  ? 'No hay programas de profesores con estos filtros.'
+                  : boardFilter !== ALL_BOARDS && items.length > 0
+                    ? `No hay ${tab === 'ejemplos' ? 'ejemplos' : 'programas'} para ${boardLabel(boardFilter)}.`
+                    : currentTab.empty}
               </p>
+              {tab === 'publico' && onlyVerified && items.length > 0 && (
+                <button type="button" className="text-[12.5px] font-bold text-brand-teal-dark hover:underline" onClick={() => setOnlyVerified(false)}>
+                  Ver todos los autores
+                </button>
+              )}
               {boardFilter !== ALL_BOARDS && items.length > 0 && (
                 <button type="button" className="text-[12.5px] font-bold text-brand-teal-dark hover:underline" onClick={() => setBoardFilter(ALL_BOARDS)}>
                   Ver todos los lenguajes
@@ -427,6 +484,8 @@ export default function ProjectsModal({
                   autor={p.autor}
                   updatedAt={p.updatedAt}
                   usos={tab === 'publico' && !showingCode ? (p.usos ?? 0) : null}
+                  verificado={tab === 'publico' && !showingCode && p.verificado}
+                  onToggleVerified={isAdmin && tab === 'publico' && !showingCode ? () => handleToggleVerified(p) : null}
                   origin={tab === 'biblioteca' && !showingCode ? p.origen : null}
                   selected={selectedId === p.id}
                   onClick={() => setSelectedId(p.id)}

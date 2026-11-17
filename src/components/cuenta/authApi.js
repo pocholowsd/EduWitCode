@@ -80,6 +80,10 @@ export const deleteProyectoUsuario = (id) =>
 
 export const listProyectosPublicos = () => request('/api/proyectos-publicos');
 
+// Solo administradores: insignia de profesor verificado para un autor.
+export const setAutorVerificado = (usuarioId, verificado) =>
+  request(`/api/usuarios/${usuarioId}/verificado`, { method: 'PUT', body: { verificado }, auth: true });
+
 export const getProyectoPublico = (id) => request(`/api/proyectos-publicos/${id}`);
 
 export const copiarProyectoPublico = (id) =>
