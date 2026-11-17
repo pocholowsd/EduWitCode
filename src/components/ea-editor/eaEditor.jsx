@@ -21,6 +21,7 @@ import SaveProjectModal from '../cuenta/SaveProjectModal';
 import UnsavedChangesModal from '../cuenta/UnsavedChangesModal';
 import { codigoFromLocation, shareUrl } from '../cuenta/projects/shareLink';
 import { importacionDesdeUrl } from './importarDesdeUrl';
+import { traducirError, crearDetectorTraceback } from '../../api/erroresCodigo';
 import {
     getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
     getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
@@ -218,6 +219,8 @@ export default function EaEditor() {
                 lineWrapping: true
             });
             cmInstanceRef.current.setValue(CODIGO_BASE[selectedBoard]);
+            // Al editar, las líneas marcadas con error ya no corresponden: se quitan.
+            cmInstanceRef.current.on('change', limpiarErrores);
         }
 
         const canalSerial = new BroadcastChannel('canal_arduino');
@@ -234,10 +237,43 @@ export default function EaEditor() {
         };
     }, []);
 
-    const logConsole = (text, tone = 'info') => {
+    // linea: línea del programa a la que se refiere el mensaje (se muestra como botón para ir a ella).
+    const logConsole = (text, tone = 'info', linea = null) => {
         const id = ++logSeqRef.current;
-        setTerminal((prev) => [...prev.slice(-80), { id, text, tone }]);
+        setTerminal((prev) => [...prev.slice(-80), { id, text, tone, linea }]);
         return id;
+    };
+
+    // ---- Errores del programa con su línea: se marcan en el editor y se listan en la consola.
+    const lineasErrorRef = useRef([]);
+
+    function limpiarErrores() {
+        const cm = cmInstanceRef.current;
+        if (!cm || !lineasErrorRef.current.length) return;
+        lineasErrorRef.current.forEach((handle) => cm.removeLineClass(handle, 'wrap', 'cm-linea-error'));
+        lineasErrorRef.current = [];
+    }
+
+    const irALinea = (linea) => {
+        const cm = cmInstanceRef.current;
+        if (!cm) return;
+        const n = Math.min(Math.max(linea - 1, 0), cm.lineCount() - 1);
+        cm.focus();
+        cm.setCursor({ line: n, ch: 0 });
+        cm.scrollIntoView({ line: n, ch: 0 }, 80);
+    };
+
+    const mostrarErrores = (errores) => {
+        const cm = cmInstanceRef.current;
+        limpiarErrores();
+        errores.slice(0, 10).forEach(({ linea, mensaje }) => {
+            logConsole(traducirError(mensaje), 'error', linea);
+            if (cm && linea >= 1 && linea <= cm.lineCount()) {
+                lineasErrorRef.current.push(cm.addLineClass(linea - 1, 'wrap', 'cm-linea-error'));
+            }
+        });
+        if (errores.length > 10) logConsole(`…y ${errores.length - 10} errores más.`, 'error');
+        if (errores.length) irALinea(errores[0].linea);
     };
 
     const updateLog = (id, text, tone = 'info', progress = null) => {
@@ -583,6 +619,11 @@ export default function EaEditor() {
         const decoder = new TextDecoder();
         let ultimoDato = 0;
         let terminoEnSalto = true;
+        // Errores de MicroPython mientras corre el programa (NameError, etc.): se avisa con su línea.
+        const detectarTraceback = crearDetectorTraceback((error) => {
+            logConsole('[ERROR] El programa se detuvo por un error:', 'error');
+            mostrarErrores([error]);
+        });
         try {
             while (portRef.current && portRef.current.readable && keepReadingRef.current) {
                 readerRef.current = portRef.current.readable.getReader();
@@ -598,6 +639,7 @@ export default function EaEditor() {
                             ultimoDato = ahora;
                             terminoEnSalto = text.endsWith('\n');
                             escribirEnMonitor((separar ? '\n' : '') + text);
+                            detectarTraceback(text);
                         }
                     }
                 } catch (error) {
@@ -717,7 +759,9 @@ export default function EaEditor() {
         }
 
         if (!response.ok) {
-            throw new Error(data?.error || rawBody || `Error HTTP ${response.status}`);
+            const error = new Error(data?.error || rawBody || `Error HTTP ${response.status}`);
+            error.errores = data?.errores;
+            throw error;
         }
         return data;
     };
@@ -802,6 +846,7 @@ export default function EaEditor() {
         await new Promise(resolve => setTimeout(resolve, 1200));
 
         const code = cmInstanceRef.current.getValue();
+        limpiarErrores();
 
         const onProgress = (percent) => {
             updateLog(statusId, '[SISTEMA] Subiendo...', 'progress', Math.max(0, Math.min(100, Math.round(percent))));
@@ -816,7 +861,13 @@ export default function EaEditor() {
             }
         } catch (err) {
             uploadSucceeded = false;
-            updateLog(statusId, `[ERROR] ${errorMessage(err)}`, 'error');
+            if (err?.errores?.length) {
+                const n = err.errores.length;
+                updateLog(statusId, `[ERROR] El programa tiene ${n === 1 ? 'un error' : `${n} errores`}. Haz clic en la línea para ir a ella:`, 'error');
+                mostrarErrores(err.errores);
+            } else {
+                updateLog(statusId, `[ERROR] ${errorMessage(err)}`, 'error');
+            }
         }
 
         try {
@@ -1114,6 +1165,11 @@ export default function EaEditor() {
                                     ) : (
                                         terminal.map((entry) => (
                                             <div key={entry.id} className={`log-line log-${entry.tone}`}>
+                                                {entry.linea != null && (
+                                                    <button type="button" className="log-linea" onClick={() => irALinea(entry.linea)} title="Ir a esta línea">
+                                                        Línea {entry.linea}
+                                                    </button>
+                                                )}
                                                 {entry.text}
                                                 {entry.progress != null && (
                                                     <span className="log-bar">

@@ -33,6 +33,23 @@ EDUWIT_LIB_DIR = Path(__file__).resolve().parent.parent.parent / "libraries" / "
 EDUWIT_INCLUDE_SRC = re.compile(r'#include\s+"src/EduWit\.h"')
 
 
+# Errores de gcc en el sketch: ".../sketch/sketch.ino:12:5: error: 'x' was not declared in this scope".
+# arduino-cli agrega directivas #line al preprocesar el .ino, así que la línea es la del editor.
+ERROR_SKETCH = re.compile(r"sketch\.ino:(\d+):(?:(\d+):)?\s*(?:fatal\s+)?error:\s*(.+)")
+
+
+def _errores_sketch(stderr: str) -> list[dict]:
+    """Errores del programa del usuario con su línea (sin repetir), en el orden en que aparecen."""
+    errores, vistos = [], set()
+    for m in ERROR_SKETCH.finditer(stderr):
+        linea, columna, mensaje = int(m.group(1)), int(m.group(2) or 0), m.group(3).strip()
+        if (linea, mensaje) in vistos:
+            continue
+        vistos.add((linea, mensaje))
+        errores.append({"linea": linea, "columna": columna, "mensaje": mensaje})
+    return errores
+
+
 async def _boot_app0() -> Path | None:
     """boot_app0.bin viene con el soporte de ESP32 instalado en arduino-cli (no lo genera la compilación)."""
     try:
@@ -113,7 +130,9 @@ async def compile_only(payload: UploadIn):
             )
 
         if compile_code != 0:
-            return JSONResponse(status_code=500, content={"error": compile_err or "Error de compilación"})
+            # Las rutas temporales del servidor no le dicen nada al usuario.
+            detalle = (compile_err or "Error de compilación").replace(str(sketch_dir) + "\\", "").replace(str(sketch_dir) + "/", "")
+            return JSONResponse(status_code=400, content={"error": detalle, "errores": _errores_sketch(compile_err)})
 
         if fqbn.startswith("esp32:"):
             archivos = await _archivos_esp32(output_dir)

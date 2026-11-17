@@ -1,5 +1,6 @@
 import { ESPLoader, Transport } from 'esptool-js';
 import { errorMessage } from './webSerial';
+import { errorDeTraceback } from './erroresCodigo';
 
 export const MICROPYTHON_BAUD = 115200;
 
@@ -120,7 +121,9 @@ async function execRaw(writer, inbox, code, timeoutMs) {
     const output = await inbox.waitFor('\x04', timeoutMs);
     const errorOutput = await inbox.waitFor('\x04', timeoutMs);
     if (errorOutput.trim()) {
-        throw new Error(`Error al ejecutar en la placa:\n${errorOutput.trim()}`);
+        const error = new Error(`Error al ejecutar en la placa:\n${errorOutput.trim()}`);
+        error.salidaPlaca = errorOutput;
+        throw error;
     }
     return output;
 }
@@ -137,8 +140,19 @@ const UPLOAD_TIMEOUT_MS = 8000;
 async function escribirMainPy(writer, inbox, codigo, onLog) {
     onLog('Copiando código como main.py...');
     const base64 = uint8ArrayToBase64(new TextEncoder().encode(codigo));
-    const snippet = `import ubinascii\nwith open('main.py','wb') as _f:\n _f.write(ubinascii.a2b_base64('${base64}'))\n`;
-    await execRaw(writer, inbox, snippet, UPLOAD_TIMEOUT_MS);
+    // Antes de guardar, la placa compila el programa: si tiene un error de sintaxis no se sobrescribe
+    // main.py (sigue el programa anterior) y el Traceback dice la línea. Si el firmware no trae compile(), se omite.
+    const snippet = `import ubinascii\n_src = ubinascii.a2b_base64('${base64}')\ntry:\n compile(_src.decode(), 'main.py', 'exec')\nexcept NameError:\n pass\nwith open('main.py','wb') as _f:\n _f.write(_src)\n`;
+    try {
+        await execRaw(writer, inbox, snippet, UPLOAD_TIMEOUT_MS);
+    } catch (error) {
+        const errorCodigo = error.salidaPlaca && errorDeTraceback(error.salidaPlaca.replace(/\r/g, ''));
+        if (!errorCodigo) throw error;
+        await exitRawReplAndSoftReset(writer);
+        const conLinea = new Error(`El programa tiene un error en la línea ${errorCodigo.linea}.`);
+        conLinea.errores = [errorCodigo];
+        throw conLinea;
+    }
 
     onLog('Reiniciando la placa para ejecutar el programa...');
     await exitRawReplAndSoftReset(writer);
