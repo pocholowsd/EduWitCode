@@ -29,6 +29,12 @@ export const PLACAS = [
 
 const ALL_BOARDS = 'all';
 
+// Orden de los programas públicos. El servidor ya los manda por popularidad.
+const SORTS = {
+  usos: { label: 'Más usados', compare: (a, b) => (b.usos ?? 0) - (a.usos ?? 0) || new Date(b.updatedAt) - new Date(a.updatedAt) },
+  recientes: { label: 'Más recientes', compare: (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt) },
+};
+
 const boardLabel = (value) => PLACAS.find((p) => p.value === value)?.label ?? value;
 
 function formatDate(value) {
@@ -42,7 +48,7 @@ const ORIGIN_BADGES = {
   ejemplo: { label: 'Ejemplo', icon: 'bi-journal-code', tone: 'bg-violet-50 text-violet-700' },
 };
 
-function ProjectCard({ title, board, autor, updatedAt, description, origin, selected, onClick, onDoubleClick, onDelete, access, onEditAccess, onReplace }) {
+function ProjectCard({ title, board, autor, updatedAt, usos, description, origin, selected, onClick, onDoubleClick, onDelete, access, onEditAccess, onReplace }) {
   return (
     <button
       type="button"
@@ -74,6 +80,12 @@ function ProjectCard({ title, board, autor, updatedAt, description, origin, sele
             <span className="flex min-w-0 items-center gap-1" title="Última modificación">
               <i className="bi bi-clock-history text-[#a6acb8]" />
               <span className="truncate">{formatDate(updatedAt)}</span>
+            </span>
+          )}
+          {usos != null && (
+            <span className="flex min-w-0 items-center gap-1" title="Personas que lo han abierto">
+              <i className="bi bi-people text-[#a6acb8]" />
+              <span className="truncate">{usos === 1 ? '1 uso' : `${usos} usos`}</span>
             </span>
           )}
         </div>
@@ -121,6 +133,7 @@ export default function ProjectsModal({
   currentBoard, isAdmin = false, getCurrentProgram,
 }) {
   const [boardFilter, setBoardFilter] = useState(ALL_BOARDS);
+  const [sort, setSort] = useState('usos');
   // Formulario de ejemplo (solo admin): { initial: ejemplo a reemplazar }.
   const [exampleForm, setExampleForm] = useState(null);
   const [exampleSaving, setExampleSaving] = useState(false);
@@ -179,9 +192,10 @@ export default function ProjectsModal({
   const filtered = useMemo(() => {
     if (showingCode) return codeLookup.proyecto ? [codeLookup.proyecto] : [];
     const query = search.toLowerCase();
-    return items.filter((p) => (boardFilter === ALL_BOARDS || p.board === boardFilter)
+    const list = items.filter((p) => (boardFilter === ALL_BOARDS || p.board === boardFilter)
       && (p.nombre.toLowerCase().includes(query) || (p.categoria || '').toLowerCase().includes(query)));
-  }, [items, search, showingCode, codeLookup, boardFilter]);
+    return tab === 'publico' ? [...list].sort(SORTS[sort].compare) : list;
+  }, [items, search, showingCode, codeLookup, boardFilter, tab, sort]);
 
   // Ejemplos agrupados por categoría, en orden alfabético.
   const exampleGroups = useMemo(() => {
@@ -325,6 +339,19 @@ export default function ProjectsModal({
                 {boardOptions.map((value) => <option key={value} value={value}>{boardLabel(value)}</option>)}
               </select>
             </label>
+            {tab === 'publico' && (
+              <label className="flex min-w-0 items-center gap-2 text-[12.5px] font-semibold text-[#4a4f59]">
+                <i className="bi bi-sort-down text-[#8a90a0]" />
+                <span className="shrink-0">Ordenar:</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="min-w-0 cursor-pointer rounded-lg border border-[#dde1e8] bg-white px-2 py-1.5 text-[12.5px] font-semibold text-[#2c313a] outline-none transition-colors focus:border-brand-teal"
+                >
+                  {Object.entries(SORTS).map(([value, s]) => <option key={value} value={value}>{s.label}</option>)}
+                </select>
+              </label>
+            )}
           </div>
         )}
 
@@ -399,6 +426,7 @@ export default function ProjectsModal({
                   board={p.board}
                   autor={p.autor}
                   updatedAt={p.updatedAt}
+                  usos={tab === 'publico' && !showingCode ? (p.usos ?? 0) : null}
                   origin={tab === 'biblioteca' && !showingCode ? p.origen : null}
                   selected={selectedId === p.id}
                   onClick={() => setSelectedId(p.id)}

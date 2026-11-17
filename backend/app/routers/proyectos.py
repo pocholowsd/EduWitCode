@@ -60,6 +60,7 @@ def to_project_summary(row: dict) -> dict:
         "codigo": row.get("codigo"),
         "autor": row["autor"],
         "origen": row.get("origen"),
+        "usos": row.get("usos"),
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
@@ -186,12 +187,15 @@ def list_proyectos_usuario(user_id: int = Depends(require_auth), db=Depends(get_
     return {"ok": True, "proyectos": [to_project_summary(r) for r in rows]}
 
 
+# usos = personas distintas que tienen una copia en su Biblioteca (cada quien cuenta una sola vez,
+# porque la copia se reutiliza). Ordenados de más a menos usados; el cliente puede reordenar por fecha.
 @router.get("/proyectos-publicos")
 def list_proyectos_publicos(db=Depends(get_db)):
     rows = query(db, """
-        SELECT p.id, p.nombre, p.board, p.acceso, p.updated_at, p.created_at, COALESCE(u.alias, u.nombre) AS autor
+        SELECT p.id, p.nombre, p.board, p.acceso, p.updated_at, p.created_at, COALESCE(u.alias, u.nombre) AS autor,
+          (SELECT COUNT(DISTINCT c.usuario_id) FROM proyectos_codigo c WHERE c.origen_id = p.id AND c.es_copia = 1) AS usos
         FROM proyectos_codigo p JOIN usuarios u ON u.id = p.usuario_id
-        WHERE p.acceso = 'publico' ORDER BY p.updated_at DESC
+        WHERE p.acceso = 'publico' ORDER BY usos DESC, p.updated_at DESC
     """)
     return {"ok": True, "proyectos": [to_project_summary(r) for r in rows]}
 
