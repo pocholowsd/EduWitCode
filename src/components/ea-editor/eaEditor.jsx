@@ -23,7 +23,7 @@ import { codigoFromLocation, shareUrl } from '../cuenta/projects/shareLink';
 import { importacionDesdeUrl } from './importarDesdeUrl';
 import { traducirError, crearDetectorTraceback } from '../../api/erroresCodigo';
 import {
-    getToken, clearToken, fetchMe, TOKEN_STORAGE_KEY,
+    fetchMe, irALogin, cerrarSesion,
     getProyectoUsuario, getProyectoPublico, getProyectoPorCodigo, copiarProyectoPorCodigo,
     createProyectoUsuario, updateProyectoUsuario, updateAccesoProyecto,
     getEjemplo, copiarEjemplo, createEjemplo, copiarProyectoPublico,
@@ -121,6 +121,8 @@ function MoonIcon() {
 // o un ejemplo (al guardarlo queda como copia en la Biblioteca).
 const PROYECTO_NUEVO = { remoteId: null, nombre: null, codigo: null, esCopia: false, origenCodigo: null, origenPublicoId: null, origenEjemploId: null, savedSnapshot: null };
 
+// Programa abierto mientras se va a iniciar sesión (en eduwitlabs.com.mx); se restaura al volver.
+const PROGRAMA_PENDIENTE_KEY = 'code_programa_pendiente';
 const esCodigoInicial = (codigo, placa) => codigo.trim() === CODIGO_VACIO[placa].trim() || codigo === CODIGO_BASE[placa];
 
 const nombreArchivo = (nombre) => nombre.trim().replace(/\.(py|ino)$/i, '').replace(/[\\/:*?"<>|]/g, '_');
@@ -147,6 +149,8 @@ export default function EaEditor() {
     const [guardarDialogo, setGuardarDialogo] = useState(null);
     const [proyecto, setProyecto] = useState(PROYECTO_NUEVO);
     const [user, setUser] = useState(null);
+    // La sesión vive en una cookie que el JavaScript no puede leer: hasta que responde fetchMe() no se sabe si hay.
+    const [sessionChecked, setSessionChecked] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveModalOpen, setSaveModalOpen] = useState(false);
     const [saveError, setSaveError] = useState('');
@@ -339,16 +343,17 @@ export default function EaEditor() {
 
     useEffect(() => {
         const syncUser = () => {
-            if (!getToken()) { setUser(null); return; }
             fetchMe()
-                .then((data) => setUser(data.user))
-                .catch(() => { clearToken(); setUser(null); });
+                .then((data) => setUser((prev) => (JSON.stringify(prev) === JSON.stringify(data.user) ? prev : data.user)))
+                // Solo un 401/404 significa "sin sesión"; una falla de red momentánea no saca a nadie (vaciaría el editor).
+                .catch((err) => { if (err.status === 401 || err.status === 404) setUser(null); })
+                .finally(() => setSessionChecked(true));
         };
         syncUser();
-        // Otra pestaña inició o cerró sesión: el token es compartido, así que hay que reflejar esa cuenta aquí.
-        const onStorage = (e) => { if (e.key === TOKEN_STORAGE_KEY || e.key === null) syncUser(); };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
+        // Al volver a la ventana se pregunta de nuevo: pudo cerrar sesión (o entrar con otra cuenta)
+        // en otra pestaña, en la landing, en Escolar o en Blocks, porque la sesión es la misma en toda la plataforma.
+        window.addEventListener('focus', syncUser);
+        return () => window.removeEventListener('focus', syncUser);
     }, []);
 
     // Al cerrar sesión o cambiar de cuenta, lo abierto pertenece a la cuenta anterior: se empieza un programa vacío.
@@ -376,7 +381,7 @@ export default function EaEditor() {
         : snapshotActual() !== proyecto.savedSnapshot);
 
     const handleGuardarNube = () => {
-        if (!user) { setLoginModalOpen(true); return; }
+        if (!user) { abrirLogin(true); return; }
         if (saving) return;
         setSaveError('');
         setSaveModalOpen(true);
@@ -445,21 +450,43 @@ export default function EaEditor() {
         }
     };
 
-    const handleAuthenticated = (nextUser) => {
-        setUser(nextUser);
-        setLoginModalOpen(false);
-        if (pendingAction) setSaveModalOpen(true);
+    // Cierra la sesión en toda la plataforma (Code, Blocks, landing y Escolar).
+    const logout = async () => {
+        await cerrarSesion();
+        setUser(null);
     };
 
-    const logout = () => {
-        clearToken();
-        setUser(null);
+    // Ir a iniciar sesión sale de la página: antes se guarda el programa abierto para restaurarlo al volver.
+    // loginParaGuardar: se pidió la sesión para guardar (al volver se abre el modal de guardar).
+    const loginParaGuardar = useRef(false);
+    const continuarALogin = async () => {
+        try {
+            sessionStorage.setItem(PROGRAMA_PENDIENTE_KEY, JSON.stringify({
+                placa: selectedBoard,
+                codigo: cmInstanceRef.current.getValue(),
+                nombrePrograma,
+                proyecto,
+                guardar: loginParaGuardar.current,
+                pendingAction: loginParaGuardar.current ? pendingAction : null,
+            }));
+        } catch {
+            // Sin sessionStorage (modo privado estricto): se va al login igual, sin conservar el programa.
+        }
+        // Si quedó una sesión de la plataforma que Code no acepta (p. ej. una creada antes de que trajera el
+        // correo), el login la vería válida y regresaría aquí sin crear otra. Se cierra primero para que pida
+        // entrar de nuevo. Sin sesión no hace nada; si el backend central no responde, se sigue igual.
+        await Promise.race([cerrarSesion(), new Promise((resolve) => setTimeout(resolve, 3000))]);
+        irALogin();
+    };
+    const abrirLogin = (paraGuardar = false) => {
+        loginParaGuardar.current = paraGuardar;
+        setLoginModalOpen(true);
     };
 
     const runAction = (action) => {
         if (action === 'new') cambiarPlaca(selectedBoard);
         if (action === 'logout') logout();
-        if (action === 'switch') { logout(); setLoginModalOpen(true); }
+        if (action === 'switch') cerrarSesion().then(irALogin);
         if (action?.type === 'open') abrirProyecto(action.id, action.source);
     };
 
@@ -477,7 +504,7 @@ export default function EaEditor() {
         setUnsavedPromptOpen(false);
         setSaveError('');
         if (user) setSaveModalOpen(true);
-        else setLoginModalOpen(true);
+        else abrirLogin(true);
     };
 
     const handleUnsavedDiscard = () => {
@@ -495,7 +522,7 @@ export default function EaEditor() {
     // su copia en la Biblioteca; sin sesión se abre sin guardar y se convierte en copia al guardarlo.
     const abrirProyecto = async (id, source) => {
         try {
-            const loggedIn = Boolean(getToken());
+            const loggedIn = Boolean(user);
             const loaders = {
                 usuario: getProyectoUsuario,
                 // Compartidos, públicos y ejemplos: con sesión se abre (o se crea) la copia en Mi biblioteca.
@@ -540,14 +567,50 @@ export default function EaEditor() {
     };
 
     // Al entrar por un enlace /code/<codigo>, se abre ese programa y la URL vuelve a la raíz.
+    // Se espera a saber si hay sesión: con sesión, el programa se agrega a la Biblioteca.
     const openedFromLink = useRef(false);
     useEffect(() => {
+        if (!sessionChecked) return;
         const codigo = codigoFromLocation();
         if (!codigo || openedFromLink.current) return;
         openedFromLink.current = true;
         window.history.replaceState(null, '', '/');
         abrirProyecto(codigo, 'codigo');
+    }, [sessionChecked]);
+
+    // De regreso del login: se restaura el programa que estaba abierto y, si se iba a guardar, se abre el modal.
+    const guardarAlVolver = useRef(null);
+    useEffect(() => {
+        let pendiente = null;
+        try {
+            pendiente = JSON.parse(sessionStorage.getItem(PROGRAMA_PENDIENTE_KEY) || 'null');
+            sessionStorage.removeItem(PROGRAMA_PENDIENTE_KEY);
+        } catch {
+            pendiente = null;
+        }
+        const cm = cmInstanceRef.current;
+        if (!cm || !pendiente || typeof pendiente.codigo !== 'string' || !MODO_EDITOR[pendiente.placa]) return;
+        cm.setOption('mode', MODO_EDITOR[pendiente.placa]);
+        cm.setValue(pendiente.codigo);
+        setSelectedBoard(pendiente.placa);
+        setPlacaPendiente(null);
+        if (pendiente.nombrePrograma) setNombrePrograma(pendiente.nombrePrograma);
+        if (pendiente.proyecto) setProyecto({ ...PROYECTO_NUEVO, ...pendiente.proyecto });
+        if (pendiente.guardar) guardarAlVolver.current = { pendingAction: pendiente.pendingAction ?? null };
     }, []);
+    useEffect(() => {
+        if (!sessionChecked || !guardarAlVolver.current) return;
+        if (!user) {
+            guardarAlVolver.current = null;
+            logConsole('No se inició sesión: el programa sigue abierto, pero no se guardó.');
+            return;
+        }
+        if (!user.alias) return; // primero elige su alias (cuenta nueva); después se abre el modal de guardar
+        setPendingAction(guardarAlVolver.current.pendingAction);
+        guardarAlVolver.current = null;
+        setSaveError('');
+        setSaveModalOpen(true);
+    }, [sessionChecked, user]);
 
     // Al entrar con #importar=... (código exportado desde el estudio de bloques), se carga como programa
     // nuevo sin guardar y se limpia la URL.
@@ -1088,7 +1151,7 @@ export default function EaEditor() {
             {toolbar}
             <CuentaHeader
                 user={user}
-                onLogin={() => setLoginModalOpen(true)}
+                onLogin={() => abrirLogin()}
                 onOpenProjects={() => abrirExplorador('usuario')}
                 onOpenProfile={() => setProfileModalOpen(true)}
                 onSwitchAccount={() => requestAction('switch')}
@@ -1351,7 +1414,7 @@ export default function EaEditor() {
             <LoginModal
                 open={loginModalOpen}
                 onClose={() => { setLoginModalOpen(false); setPendingAction(null); }}
-                onAuthenticated={handleAuthenticated}
+                onContinue={continuarALogin}
             />
             <ProfileModal
                 open={profileModalOpen || aliasMissing}
@@ -1366,7 +1429,7 @@ export default function EaEditor() {
                 onClose={() => setProjectsModalOpen(false)}
                 isAuthenticated={!!user}
                 userId={user?.id}
-                onRequireLogin={() => setLoginModalOpen(true)}
+                onRequireLogin={() => abrirLogin()}
                 onOpenProject={(id, source) => requestAction({ type: 'open', id, source })}
                 initialTab={projectsInitialTab}
                 currentBoard={NOMBRE_PLACA[selectedBoard]}

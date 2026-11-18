@@ -7,7 +7,8 @@ ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
+    # extra="ignore": variables que ya no se usan (como JWT_SECRET) no impiden arrancar.
+    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
@@ -21,7 +22,8 @@ class Settings(BaseSettings):
     db_password: str = ""
     db_name: str = "eduwit_go"
 
-    jwt_secret: str = ""
+    # La sesión es la de la plataforma (eduwitlabs.com.mx/login): se verifica con esta llave pública.
+    sesion_llave_url: str = "https://eduwitlabs.com.mx/api/auth/llave-publica"
 
     # Correos (separados por coma) cuyas cuentas se vuelven administradoras al arrancar.
     admin_emails: str = ""

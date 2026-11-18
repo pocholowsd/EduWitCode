@@ -9,7 +9,9 @@ export default defineConfig({
 
       '/api': {
         target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
+        // Se conserva el Host del navegador: el backend compara el Origin con el Host para rechazar
+        // peticiones de otros sitios (CSRF), y la cookie de sesión llega igual a través del proxy.
+        changeOrigin: false,
         secure: false,
       }
     },

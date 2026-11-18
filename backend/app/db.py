@@ -95,6 +95,9 @@ def migrate() -> None:
         # Rol de la cuenta (misma columna que usa bloques): solo los administradores publican ejemplos.
         if column("rol") is None:
             execute(conn, "ALTER TABLE usuarios ADD COLUMN rol ENUM('usuario', 'admin') NOT NULL DEFAULT 'usuario'")
+        # Cuenta de la plataforma (sesión única de EduWitLabs) a la que corresponde cada perfil (igual que bloques).
+        if column("plataforma_id") is None:
+            execute(conn, "ALTER TABLE usuarios ADD COLUMN plataforma_id INT NULL UNIQUE")
         # ADMIN_EMAILS (separados por coma) vuelve administradores a esas cuentas al arrancar.
         admin_emails = settings.admin_email_list
         if admin_emails:

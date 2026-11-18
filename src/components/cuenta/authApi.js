@@ -1,40 +1,33 @@
 import { API_BASE } from '../../api/client';
 
 const BASE_URL = API_BASE;
-const STORAGE_KEY = 'eduwit_token';
+// La sesión es la de la plataforma: llega en la cookie HttpOnly `eduwit_sesion`, que el navegador manda
+// solo a la API de Code (mismo dominio). El JavaScript no la puede leer: para saber si hay sesión se usa fetchMe().
 
-export function getToken() {
-  return localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+// Login central de la plataforma. En local se apuntan a la landing y al backend locales.
+const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || 'https://eduwitlabs.com.mx/login';
+const AUTH_URL = import.meta.env.VITE_AUTH_URL || 'https://eduwitlabs.com.mx/api/auth';
+
+// Manda a iniciar sesión y regresa a esta misma página al terminar.
+export function irALogin() {
+  window.location.assign(`${LOGIN_URL}?volver=${encodeURIComponent(window.location.href)}`);
 }
 
-export const TOKEN_STORAGE_KEY = STORAGE_KEY;
-
-export function setToken(token, remember) {
-  // Borrar la sesión anterior: si quedara en localStorage, getToken la seguiría usando.
-  clearToken();
-  if (remember) localStorage.setItem(STORAGE_KEY, token);
-  else sessionStorage.setItem(STORAGE_KEY, token);
+// Cierra la sesión en toda la plataforma (también en la landing, Escolar y Blocks).
+export async function cerrarSesion() {
+  await fetch(`${AUTH_URL}/sesion`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
 }
 
-export function clearToken() {
-  localStorage.removeItem(STORAGE_KEY);
-  sessionStorage.removeItem(STORAGE_KEY);
-}
-
-async function request(path, { method = 'GET', body, auth = false } = {}) {
+// auth: se conserva por compatibilidad con las llamadas; la cookie viaja sola en cada petición.
+async function request(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  // auth: true exige sesión; 'optional' manda el token solo si existe.
-  if (auth) {
-    const token = getToken();
-    if (!token && auth !== 'optional') throw new Error('No has iniciado sesión.');
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
 
   let res;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
+      credentials: 'same-origin',
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -42,15 +35,13 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
   }
 
   const data = await res.json().catch(() => ({ ok: false, message: 'Respuesta inválida del servidor.' }));
-  if (!res.ok || !data.ok) throw new Error(data.message || data.error || 'Ocurrió un error.');
+  if (!res.ok || !data.ok) {
+    const error = new Error(data.message || data.error || 'Ocurrió un error.');
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }
-
-export const register = (nombre, alias, email, password) =>
-  request('/api/auth/register', { method: 'POST', body: { nombre, alias, email, password } });
-
-export const login = (email, password) =>
-  request('/api/auth/login', { method: 'POST', body: { email, password } });
 
 export const fetchMe = () => request('/api/auth/me', { auth: true });
 

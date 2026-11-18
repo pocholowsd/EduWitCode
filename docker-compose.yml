@@ -20,7 +20,6 @@ services:
       DB_USER: ${DB_USER:-}
       DB_PASSWORD: ${DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-eduwit_go}
-      JWT_SECRET: ${JWT_SECRET:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
     networks:
       - edge
