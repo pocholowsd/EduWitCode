@@ -55,6 +55,16 @@ function CopyIcon() {
     );
 }
 
+function MaximizeIcon({ max }) {
+    return (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {max
+                ? <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+                : <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />}
+        </svg>
+    );
+}
+
 function CaretIcon({ open }) {
     return (
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -193,6 +203,11 @@ export default function EaEditor() {
         if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }, [terminal]);
     const [panelHeight, setPanelHeight] = useState(170);
+    const [panelMax, setPanelMax] = useState(false);
+
+    useEffect(() => {
+        if (!panelMax) cmInstanceRef.current?.refresh();
+    }, [panelMax]);
     const ideContainerRef = useRef(null);
     const dragPanelRef = useRef(null);
     const [headerSlot, setHeaderSlot] = useState(null);
@@ -1182,7 +1197,7 @@ export default function EaEditor() {
         <div className="ea-editor-container">
             {headerSlot ? createPortal(barraSuperior, headerSlot) : barraSuperior}
             <div className="container">
-                <div className={`ide-container ${tema === 'light' ? 'is-light' : ''}`} ref={ideContainerRef}>
+                <div className={`ide-container ${tema === 'light' ? 'is-light' : ''} ${panelMax ? 'panel-max' : ''}`} ref={ideContainerRef}>
                     <div className="ide-titlebar">
                         <span className="ide-filename">{nombrePrograma + EXTENSION[selectedBoard]}</span>
                         <div className="ide-titlebar-actions">
@@ -1218,7 +1233,14 @@ export default function EaEditor() {
                             onPointerCancel={terminarArrastrePanel}
                         />
                         <div className="bottom-panel-header">
-                            <button type="button" className="bottom-panel-toggle" onClick={() => setPanelOpen((v) => !v)}>
+                            <button
+                                type="button"
+                                className="bottom-panel-toggle"
+                                onClick={() => {
+                                    if (panelMax) { setPanelMax(false); return; }
+                                    setPanelOpen((v) => !v);
+                                }}
+                            >
                                 <CaretIcon open={panelOpen} />
                                 <span>{showMonitor ? 'Monitor Serial' : 'Terminal'}</span>
                             </button>
@@ -1230,10 +1252,22 @@ export default function EaEditor() {
                                     {showMonitor ? <EditorIcon /> : <MonitorIcon />}
                                     <span>{showMonitor ? 'Terminal' : 'Monitor serial'}</span>
                                 </button>
+                                <button
+                                    type="button"
+                                    className="panel-chip panel-chip-icon"
+                                    title={panelMax ? 'Restaurar panel' : 'Maximizar panel'}
+                                    aria-label={panelMax ? 'Restaurar panel' : 'Maximizar panel'}
+                                    onClick={() => {
+                                        setPanelOpen(true);
+                                        setPanelMax((v) => !v);
+                                    }}
+                                >
+                                    <MaximizeIcon max={panelMax} />
+                                </button>
                             </div>
                         </div>
 
-                        <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`} style={{ height: panelHeight }}>
+                        <div className={`bottom-panel-body ${panelOpen ? '' : 'is-hidden'}`} style={panelMax ? undefined : { height: panelHeight }}>
                             <div className={`panel-output-wrap ${showMonitor ? 'is-hidden' : ''}`}>
                                 <div ref={consoleRef} id="console" className="panel-output terminal-log">
                                     {terminal.length === 0 ? (

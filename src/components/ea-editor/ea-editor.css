@@ -185,6 +185,12 @@
 .ea-editor-container .bottom-panel-actions { display: flex; align-items: center; gap: 6px; }
 .ea-editor-container .panel-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; background-color: #1f222b; border: 1px solid #333744; border-radius: 6px; color: #cbd5e1; font-size: 12px; font-weight: 600; box-shadow: none; }
 .ea-editor-container .panel-chip:hover { background-color: #282c37; }
+.ea-editor-container .panel-chip-icon { width: 26px; padding: 0; justify-content: center; }
+
+.ea-editor-container .panel-max .editor-pane { display: none; }
+.ea-editor-container .panel-max .bottom-panel { flex: 1; min-height: 0; border-top: none; }
+.ea-editor-container .panel-max .bottom-panel-resizer { display: none; }
+.ea-editor-container .panel-max .bottom-panel-body { flex: 1; min-height: 0; }
 
 .ea-editor-container .bottom-panel-body { margin-top: 4px; }
 .ea-editor-container .bottom-panel-body.is-hidden { display: none; }
