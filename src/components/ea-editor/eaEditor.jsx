@@ -483,10 +483,28 @@ export default function EaEditor() {
         setLoginModalOpen(true);
     };
 
+    // Entró desde el modal (correo o Google) sin salir de Code: se carga su perfil de Code.
+    // Si se pidió la sesión para guardar, se abre el modal de guardar (después de elegir alias si es nueva).
+    const handleAuthenticated = async () => {
+        let data;
+        try {
+            data = await fetchMe();
+        } catch {
+            throw new Error('Entraste a EduWitLabs, pero Code no pudo abrir tu cuenta. Intenta de nuevo o entra desde eduwitlabs.com.mx.');
+        }
+        if (loginParaGuardar.current) {
+            loginParaGuardar.current = false;
+            guardarAlVolver.current = { pendingAction };
+        }
+        setUser(data.user);
+        setLoginModalOpen(false);
+    };
+
     const runAction = (action) => {
         if (action === 'new') cambiarPlaca(selectedBoard);
         if (action === 'logout') logout();
-        if (action === 'switch') cerrarSesion().then(irALogin);
+        // Cambiar de cuenta: se cierra la sesión y se abre el login de Code (sin salir de la página).
+        if (action === 'switch') logout().then(() => abrirLogin());
         if (action?.type === 'open') abrirProyecto(action.id, action.source);
     };
 
@@ -1414,6 +1432,7 @@ export default function EaEditor() {
             <LoginModal
                 open={loginModalOpen}
                 onClose={() => { setLoginModalOpen(false); setPendingAction(null); }}
+                onAuthenticated={handleAuthenticated}
                 onContinue={continuarALogin}
             />
             <ProfileModal

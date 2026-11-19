@@ -18,6 +18,37 @@ export async function cerrarSesion() {
   await fetch(`${AUTH_URL}/sesion`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
 }
 
+// ID de cliente de Google de la plataforma (es público; el secreto nunca está en el navegador).
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  || '406534985758-7ou1r91ofoeelqqigdatovibr7fhmp3o.apps.googleusercontent.com';
+export const CONTACTO_URL = 'https://eduwitlabs.com.mx/#contacto';
+
+// Iniciar sesión sin salir de Code: el backend central valida y deja la misma cookie de sesión
+// para todo eduwitlabs.com.mx. Code no guarda la contraseña: va directo al backend central.
+async function entrarEnPlataforma(ruta, body) {
+  let res;
+  try {
+    res = await fetch(`${AUTH_URL}/${ruta}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('No se pudo conectar con EduWitLabs. Revisa tu conexión e intenta de nuevo.');
+  }
+  if (res.ok) return res.json().catch(() => ({}));
+  if (res.status === 503) throw new Error('El inicio de sesión no está disponible en este momento. Intenta más tarde.');
+  const data = await res.json().catch(() => ({}));
+  if (typeof data.detail === 'string') throw new Error(data.detail);
+  throw new Error(res.status === 429
+    ? 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+    : 'No se pudo iniciar sesión. Intenta de nuevo.');
+}
+
+export const entrarConCorreo = (email, password) => entrarEnPlataforma('sesion', { email, password });
+export const entrarConGoogle = (credential) => entrarEnPlataforma('google', { credential });
+
 // auth: se conserva por compatibilidad con las llamadas; la cookie viaja sola en cada petición.
 async function request(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
