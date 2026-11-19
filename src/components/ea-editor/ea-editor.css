@@ -120,13 +120,8 @@
 .ea-editor-container .ide-container { display: flex; flex-direction: column; flex: 1; min-height: 360px; min-width: 0; border: 1px solid #2a2d38; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.18); background-color: #15171e; }
 
 .ea-editor-container .ide-titlebar { position: relative; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px; border-bottom: 1px solid #262833; flex-shrink: 0; }
-.ea-editor-container .ide-dots { display: flex; gap: 8px; }
-.ea-editor-container .ide-dot { width: 13px; height: 13px; border-radius: 50%; }
-.ea-editor-container .ide-dot-red { background-color: #ff5f57; }
-.ea-editor-container .ide-dot-yellow { background-color: #febc2e; }
-.ea-editor-container .ide-dot-green { background-color: #28c840; }
 .ea-editor-container .ide-filename { position: absolute; left: 50%; transform: translateX(-50%); color: #9aa0ad; font-size: 14px; font-weight: 600; }
-.ea-editor-container .ide-titlebar-actions { display: flex; align-items: center; gap: 6px; }
+.ea-editor-container .ide-titlebar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .ea-editor-container .ide-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background-color: transparent; color: #8b909c; border-radius: 6px; box-shadow: none; }
 .ea-editor-container .ide-icon-btn:hover { background-color: #232631; color: #e5e7eb; }
 

@@ -1184,11 +1184,6 @@ export default function EaEditor() {
             <div className="container">
                 <div className={`ide-container ${tema === 'light' ? 'is-light' : ''}`} ref={ideContainerRef}>
                     <div className="ide-titlebar">
-                        <div className="ide-dots">
-                            <span className="ide-dot ide-dot-red" />
-                            <span className="ide-dot ide-dot-yellow" />
-                            <span className="ide-dot ide-dot-green" />
-                        </div>
                         <span className="ide-filename">{nombrePrograma + EXTENSION[selectedBoard]}</span>
                         <div className="ide-titlebar-actions">
                             <button
