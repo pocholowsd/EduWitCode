@@ -4,8 +4,6 @@ import './App.css';
 function AppShell() {
   return (
     <div className="app-shell">
-      <div className="app-steam-bar" />
-
       <header className="app-header">
         <div className="app-brand">
           <img className="app-brand-logo" src="/logo.svg" alt="EduCode Studio" width="38" height="40" />
