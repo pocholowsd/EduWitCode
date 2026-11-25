@@ -340,6 +340,20 @@ export default function EaEditor() {
         setGuardarDialogo(null);
     };
 
+    // Renombrar desde la píldora del editor. Si el programa está en la nube, el nuevo nombre
+    // se guarda con el siguiente "Guardar" (queda marcado como cambio sin guardar).
+    const [nombreEditando, setNombreEditando] = useState(null);
+    const renombreCanceladoRef = useRef(false);
+    const confirmarRenombrar = () => {
+        if (renombreCanceladoRef.current) { renombreCanceladoRef.current = false; return; }
+        if (nombreEditando === null) return;
+        const nombre = nombreArchivo(nombreEditando);
+        setNombreEditando(null);
+        if (!nombre || nombre === nombrePrograma) return;
+        setNombrePrograma(nombre);
+        setProyecto((p) => (p.nombre === null ? p : { ...p, nombre, savedSnapshot: null }));
+    };
+
     const cambiarPlaca = (nuevaPlaca) => {
         const cm = cmInstanceRef.current;
         cm.setOption('mode', MODO_EDITOR[nuevaPlaca]);
@@ -1199,7 +1213,30 @@ export default function EaEditor() {
             <div className="container">
                 <div className={`ide-container ${tema === 'light' ? 'is-light' : ''} ${panelMax ? 'panel-max' : ''}`} ref={ideContainerRef}>
                     <div className="ide-titlebar">
-                        <span className="ide-filename">{nombrePrograma + EXTENSION[selectedBoard]}</span>
+                        <span className="ide-filename">
+                            {nombreEditando !== null ? (
+                                <span className="ide-filename-edit">
+                                    <input
+                                        autoFocus
+                                        aria-label="Nombre del archivo"
+                                        value={nombreEditando}
+                                        onChange={(e) => setNombreEditando(e.target.value)}
+                                        onFocus={(e) => e.target.select()}
+                                        onBlur={confirmarRenombrar}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') e.target.blur();
+                                            else if (e.key === 'Escape') { renombreCanceladoRef.current = true; setNombreEditando(null); }
+                                        }}
+                                    />
+                                    <span className="ide-filename-ext">{EXTENSION[selectedBoard]}</span>
+                                </span>
+                            ) : (
+                                <button type="button" className="ide-filename-chip" title="Cambiar nombre" onClick={() => { renombreCanceladoRef.current = false; setNombreEditando(nombrePrograma); }}>
+                                    <span className="ide-filename-text">{nombrePrograma + EXTENSION[selectedBoard]}</span>
+                                    <i className="bi bi-pencil" aria-hidden="true" />
+                                </button>
+                            )}
+                        </span>
                         <div className="ide-titlebar-actions">
                             <button
                                 type="button"

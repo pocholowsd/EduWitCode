@@ -120,7 +120,18 @@
 .ea-editor-container .ide-container { display: flex; flex-direction: column; flex: 1; min-height: 360px; min-width: 0; border: 1px solid #2a2d38; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.18); background-color: #15171e; }
 
 .ea-editor-container .ide-titlebar { position: relative; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px; border-bottom: 1px solid #262833; flex-shrink: 0; }
-.ea-editor-container .ide-filename { position: absolute; left: 50%; transform: translateX(-50%); color: #9aa0ad; font-size: 14px; font-weight: 600; }
+.ea-editor-container .ide-filename { position: absolute; left: 50%; transform: translateX(-50%); color: #9aa0ad; font-size: 14px; font-weight: 600; max-width: 45%; }
+/* Píldora con el nombre del archivo y un lápiz para renombrarlo */
+.ea-editor-container .ide-filename-chip,
+.ea-editor-container .ide-filename-edit { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; height: 32px; padding: 0 12px 0 14px; border: 1px solid #2f3340; border-radius: 9px; background-color: transparent; color: #c9ced8; font-size: 14px; font-weight: 600; box-shadow: none; box-sizing: border-box; }
+.ea-editor-container .ide-filename-chip { cursor: pointer; }
+.ea-editor-container .ide-filename-chip:hover { border-color: #17c3a2; background-color: #1b1e27; }
+.ea-editor-container .ide-filename-chip:active { transform: none; }
+.ea-editor-container .ide-filename-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ea-editor-container .ide-filename-chip .bi { color: #17c3a2; font-size: 13px; flex-shrink: 0; }
+.ea-editor-container .ide-filename-edit { gap: 2px; border-color: #17c3a2; }
+.ea-editor-container .ide-filename-edit input { width: 16ch; min-width: 4ch; padding: 0; border: none; outline: none; background: transparent; color: inherit; font: inherit; }
+.ea-editor-container .ide-filename-edit .ide-filename-ext { color: #7d8392; }
 .ea-editor-container .ide-titlebar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .ea-editor-container .ide-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background-color: transparent; color: #8b909c; border-radius: 6px; box-shadow: none; }
 .ea-editor-container .ide-icon-btn:hover { background-color: #232631; color: #e5e7eb; }
@@ -263,6 +274,11 @@
 .ea-editor-container .is-light .bottom-panel,
 .ea-editor-container .is-light .ide-statusbar { border-color: #e1e6e8; }
 .ea-editor-container .is-light .ide-filename { color: #6b777d; }
+.ea-editor-container .is-light .ide-filename-chip,
+.ea-editor-container .is-light .ide-filename-edit { border-color: #d0d7da; color: #4e5b61; background-color: #fff; }
+.ea-editor-container .is-light .ide-filename-chip:hover { border-color: #17c3a2; background-color: #f6f8f8; }
+.ea-editor-container .is-light .ide-filename-edit { border-color: #17c3a2; }
+.ea-editor-container .is-light .ide-filename-edit .ide-filename-ext { color: #9aa5aa; }
 .ea-editor-container .is-light .ide-icon-btn { color: #6b777d; }
 .ea-editor-container .is-light .ide-icon-btn:hover { background-color: #f6f8f8; color: #4e5b61; }
 .ea-editor-container .is-light .ide-theme-switch { background-color: #f6f8f8; border-color: #d0d7da; }
